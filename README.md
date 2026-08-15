@@ -38,6 +38,8 @@ Starts both Workers together (via Turborepo) plus `packages/snippet`'s watch bui
 
 The two are separate `wrangler dev` processes, so by default each simulates its own local KV/D1/Durable Object storage — Assignment would never see what Config just wrote. Both `dev` scripts pass `--persist-to ../../.wrangler-state` to point at one shared directory instead, so a KV write in control-plane is actually visible to a read in assignment, matching how they'd behave in production (one real KV namespace, two Workers).
 
+`Internal Server Error` on anything that touches D1 (e.g. `/v1/auth/signup`) means migrations haven't been applied to that shared directory — re-run `pnpm --filter @ab-tester/control-plane db:migrate:local`. Needed again any time `.wrangler-state/` is deleted.
+
 **Testing:**
 
 - `pnpm test` runs the full automated suite (`vitest` + `@cloudflare/vitest-pool-workers`, real Workers runtime semantics — no dev server needed).
