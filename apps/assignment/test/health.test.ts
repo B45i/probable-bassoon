@@ -9,6 +9,20 @@ describe("GET /health", () => {
   });
 });
 
+describe("GET /snippet.js", () => {
+  it("serves the built snippet with cache headers, not JSON", async () => {
+    const res = await app.request("/snippet.js");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("application/javascript; charset=utf-8");
+    expect(res.headers.get("cache-control")).toContain("stale-while-revalidate");
+
+    const body = await res.text();
+    // The build's globalName — proof this is the real bundle, not a stub string.
+    expect(body).toContain("ABTester");
+    expect(body).toContain("sendBeacon");
+  });
+});
+
 describe("GET /openapi.json", () => {
   it("generates without error", async () => {
     // Regression check: routes/assign is mounted under a real base ("/v1"), not "/" — a

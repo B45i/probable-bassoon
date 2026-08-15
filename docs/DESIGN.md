@@ -454,6 +454,61 @@ GET  /v1/sites/:siteId/experiments/:key/results?goal=signup
     whether it was detected)
 ```
 
+### A.1 Snippet delivery and embed
+
+`GET /snippet.js` is served by the Assignment Worker itself — the same domain
+`/v1/assign` is on, not a third-party CDN (jsdelivr, unpkg, or similar) and not a
+separate static-hosting resource. A third-party CDN would put an external service on
+the very first hop of the whole critical path, before any of this system's own
+fallback logic has a chance to run, since that logic lives inside the file being
+fetched — directly against the isolation principle in section 3.2. Self-hosting keeps
+the snippet on infrastructure this system already depends on and already reasons
+about, cached at Cloudflare's own edge via ordinary `Cache-Control` headers (a short
+`max-age` with a longer `stale-while-revalidate`, so a cache refresh never makes a
+visitor's page wait on it) — this *is* a CDN, just the one the rest of the system
+already runs on. The URL is unversioned on purpose: a customer embeds it once and
+never has to touch their page again to pick up a fix, the same tolerance for eventual
+propagation already accepted for KV config (D2).
+
+Embed:
+
+```html
+<script async src="https://…/snippet.js"
+        data-site-key="…" data-experiments="hero_copy,pricing_cta"></script>
+```
+
+`async`, not a blocking synchronous tag: this system already committed to never
+blocking page render over avoiding flicker (C-1, D7, section 7.4) — a render-blocking
+snippet is the conventional way some competing tools avoid flicker, and isn't
+compatible with a requirement already treated as non-negotiable here. `data-site-key`
+and `data-experiments` are attributes on the tag, not a query string on the script's
+own URL: the script file is identical for every customer, so it can be cached once at
+the edge and reused everywhere — a query string would fragment that into one cache
+entry per customer.
+
+The snippet derives the Assignment origin from its own script URL at runtime
+(`new URL(document.currentScript.src).origin`) rather than a hardcoded domain, so the
+same build works in every environment without a swap.
+
+Visitor identity is a native `crypto.randomUUID()` (v4, not the v7 used for D1
+surrogate keys — v7's ordering exists for server-side index locality, which doesn't
+apply to a value that's never stored in a database), generated once and kept in a
+first-party cookie for a year.
+
+Public API, attached to `window.ABTester`:
+
+```
+ABTester.ready(callback)              # callback(assignments) — fires once assignment
+                                       # resolves (success, timeout, or failure all look
+                                       # the same: an empty object), or immediately if
+                                       # it already has
+ABTester.trackExposure(experimentKey) # call once the variant is actually rendered —
+                                       # exposure is counted on render, not assignment
+                                       # (section 8.1), so this is a deliberate,
+                                       # separate step, not automatic
+ABTester.trackConversion(goal)        # call on the customer's own conversion event
+```
+
 ## Appendix B — Data model
 
 ### B.1 D1 — config and conversions

@@ -1,8 +1,8 @@
 {
   "extends": "@ab-tester/tsconfig/base.json",
   "compilerOptions": {
-    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
     "noEmit": true
   },
-  "include": ["src", "test", "vitest.config.ts"]
+  "include": ["scripts"]
 }

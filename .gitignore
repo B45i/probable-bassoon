@@ -12,3 +12,4 @@ dist/
 # Generated, not authored — regenerate via `turbo run openapi generate`
 apps/*/openapi.json
 packages/api-client/src/generated/
+apps/assignment/src/generated/
