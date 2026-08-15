@@ -1,0 +1,4 @@
+{
+  "extends": "@ab-tester/tsconfig/workers.json",
+  "include": ["src", "drizzle.config.ts"]
+}

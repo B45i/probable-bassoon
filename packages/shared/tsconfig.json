@@ -1,0 +1,7 @@
+{
+  "extends": "@ab-tester/tsconfig/base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src"]
+}

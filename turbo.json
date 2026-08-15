@@ -12,6 +12,16 @@
     "lint": {},
     "test": {
       "dependsOn": ["^build"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "openapi": {
+      "outputs": ["openapi.json"]
+    },
+    "generate": {
+      "dependsOn": ["@ab-tester/control-plane#openapi"],
+      "outputs": ["src/generated/**"]
     }
   }
 }

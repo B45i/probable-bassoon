@@ -1,0 +1,27 @@
+{
+  "name": "@ab-tester/api-client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "openapi-ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.101.4"
+  },
+  "peerDependenciesMeta": {
+    "@tanstack/react-query": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@ab-tester/tsconfig": "workspace:*",
+    "@hey-api/openapi-ts": "^0.99.0",
+    "@tanstack/react-query": "^5.101.4",
+    "typescript": "^5.9.3"
+  }
+}

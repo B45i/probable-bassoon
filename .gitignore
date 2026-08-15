@@ -4,3 +4,10 @@ dist/
 .env
 .env.*
 .DS_Store
+
+# Cloudflare local dev state (D1 sqlite, KV, DO storage)
+.wrangler/
+
+# Generated, not authored — regenerate via `turbo run openapi generate`
+apps/*/openapi.json
+packages/api-client/src/generated/
