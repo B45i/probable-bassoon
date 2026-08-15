@@ -8,7 +8,7 @@ export function SitesPage() {
   const sites = useQuery(getV1SitesOptions())
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
+    <div className="mx-auto flex max-w-4xl flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-medium">Sites</h1>
         <CreateSiteDialog />

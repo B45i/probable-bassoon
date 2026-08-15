@@ -1,5 +1,6 @@
 import { postV1SitesBySiteIdExperimentsMutation } from "@ab-tester/api-client"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { IconPlus } from "@tabler/icons-react"
 import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
@@ -71,7 +72,8 @@ export function CreateExperimentDialog({ siteId }: { siteId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button size="sm" variant="outline" />}>
-        + New experiment
+        <IconPlus />
+        New experiment
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

@@ -1,2 +1,3 @@
 - use pages for snippet
 - use generated client code on snippet
+- jwt on cookie

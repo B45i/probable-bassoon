@@ -5,6 +5,7 @@ import type { ReactNode } from "react"
 import { BrowserRouter } from "react-router"
 
 import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/toast"
 import { ApiProvider } from "@/lib/api-provider"
 import { store } from "@/lib/jotai-store"
 import { queryClient } from "@/lib/query-client"
@@ -16,7 +17,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
         <JotaiProvider store={store}>
           <ApiProvider>
             <QueryClientProvider client={queryClient}>
-              <ThemeProvider>{children}</ThemeProvider>
+              <ThemeProvider>
+                <Toaster>{children}</Toaster>
+              </ThemeProvider>
             </QueryClientProvider>
           </ApiProvider>
         </JotaiProvider>

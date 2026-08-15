@@ -1,7 +1,7 @@
 /**
  * Every client-side route path in this app, in one place — the react-router
- * counterpart to apps/control-plane's routes/paths.ts. app.tsx's <Route path> and every
- * page's navigate()/<Link to> call import from here; nothing else types out
+ * counterpart to apps/control-plane's routes/paths.ts. shell/router.tsx's <Route path>
+ * and every page's navigate()/<Link to> call import from here; nothing else types out
  * "/sites/..." as a string literal.
  */
 export const ROUTES = {

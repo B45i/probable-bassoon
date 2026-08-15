@@ -1,5 +1,6 @@
 import { getV1SitesQueryKey, postV1SitesMutation } from "@ab-tester/api-client"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { IconPlus } from "@tabler/icons-react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
@@ -44,7 +45,10 @@ export function CreateSiteDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button />}>+ New site</DialogTrigger>
+      <DialogTrigger render={<Button />}>
+        <IconPlus />
+        New site
+      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>New site</DialogTitle>

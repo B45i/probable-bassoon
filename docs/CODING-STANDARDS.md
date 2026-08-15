@@ -139,12 +139,26 @@ features/<feature>/
 A component moves to the shared `components/` only once a second feature actually needs
 it — nothing gets promoted there on spec.
 
-### Pages end in `.page.tsx`
+### `shell/` holds app chrome, not features
 
-The one file per feature that a `<Route>` in `app.tsx` points at (`login.page.tsx`,
-`sites.page.tsx`). Everything else in the directory is a plain component or helper the
-page is built from — the suffix is what tells you, scanning a directory listing, which
-files are reachable by URL and which aren't.
+A route guard, a layout, or the route tree that wires them to pages isn't a feature — it
+doesn't own a page or any business data of its own; it just decides what's allowed to
+render, or wraps whatever does. Those live in `shell/`: `require-auth.tsx` is the guard
+(checks the stored token, redirects to `/login`, nothing else); `app.layout.tsx` is the
+sidebar/nav chrome rendered around whatever the guard let through; `router.tsx` is the
+`<Routes>` tree that composes the two of those with every page. Separate files, not one
+`RequireAuth` that also draws the sidebar — a guard that also renders chrome can't be
+reused for a layout that doesn't need guarding, and a sidebar change shouldn't risk the
+auth check sitting next to it.
+
+### Pages end in `.page.tsx`, layouts end in `.layout.tsx`
+
+The one file per feature that a `<Route>` in `shell/router.tsx` points at
+(`login.page.tsx`, `sites.page.tsx`). Everything else in the directory is a plain
+component or helper the page is built from — the suffix is what tells you, scanning a
+directory listing, which files are reachable by URL and which aren't. A route element
+that renders an `<Outlet>` instead of a page — `shell/app.layout.tsx` — gets
+`.layout.tsx` for the same reason.
 
 ### No magic strings
 
@@ -152,9 +166,9 @@ Same rule as `routes/paths.ts` above, covering the two places a UI accumulates s
 literals that a route path doesn't:
 
 - **Route paths** — `routes.ts` is the react-router counterpart to `routes/paths.ts`.
-  `app.tsx`'s `<Route path>` declarations and every page's `navigate()` / `<Link to>`
-  call import from there; a param'd path gets a small builder function next to it
-  (`experimentResultsPath(siteId, key)`), the same way `apps/control-plane`'s
+  `shell/router.tsx`'s `<Route path>` declarations and every page's `navigate()` /
+  `<Link to>` call import from there; a param'd path gets a small builder function next
+  to it (`experimentResultsPath(siteId, key)`), the same way `apps/control-plane`'s
   `experimentsRoute(siteId)` does.
 - **Anything read back later by name** — a `localStorage` key, a `useQueryState` search
   param — gets a named constant at its point of definition
