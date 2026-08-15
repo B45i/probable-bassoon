@@ -18,4 +18,5 @@ Built on Cloudflare's edge platform:
 ## Documentation
 
 - [`docs/DESIGN.md`](docs/DESIGN.md) — the system design: architecture, key decisions, determinism, scale, reliability, correctness, and the LLM integration
+- [`docs/CODING-STANDARDS.md`](docs/CODING-STANDARDS.md) — route file layout, and how the API code avoids repeating itself
 - [`docs/staff-principal-engineer-takehome-assignment-brief.md`](docs/staff-principal-engineer-takehome-assignment-brief.md) — the original brief

@@ -1,4 +1,6 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import { jsonContent } from "./lib/http";
+import { AUTH_BASE, HEALTH_PATH, SITES_BASE } from "./routes/paths";
 import authRoutes from "./routes/auth";
 import siteRoutes from "./routes/sites";
 import type { AppEnv } from "./types";
@@ -23,23 +25,16 @@ app.openAPIRegistry.registerComponent("securitySchemes", "bearerAuth", {
 
 const healthRoute = createRoute({
   method: "get",
-  path: "/health",
+  path: HEALTH_PATH,
   responses: {
-    200: {
-      description: "Liveness check",
-      content: {
-        "application/json": {
-          schema: z.object({ ok: z.literal(true) }),
-        },
-      },
-    },
+    200: { description: "Liveness check", content: jsonContent(z.object({ ok: z.literal(true) })) },
   },
 });
 
 app.openapi(healthRoute, (c) => c.json({ ok: true as const }));
 
-app.route("/v1/auth", authRoutes);
-app.route("/v1/sites", siteRoutes);
+app.route(AUTH_BASE, authRoutes);
+app.route(SITES_BASE, siteRoutes);
 
 app.doc31("/openapi.json", {
   openapi: "3.1.0",

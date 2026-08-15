@@ -1,32 +1,28 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import app from "../src/app";
+import { AUTH_ROUTES, SITES_ROUTES } from "../src/routes/paths";
+import type { AuthTokenResponse } from "../src/routes/auth/schemas";
+import type { SiteResponse } from "../src/routes/sites/schemas";
 
 const jsonHeaders = { "content-type": "application/json" };
 
-interface SiteResponse {
-  id: string;
-  name: string;
-  apiKey: string;
-  ownerUserId: string;
-}
-
 async function signupAndLogin(email: string) {
   const credentials = { email, password: "correct-horse-battery" };
-  await app.request("/v1/auth/signup", { method: "POST", headers: jsonHeaders, body: JSON.stringify(credentials) }, env);
+  await app.request(AUTH_ROUTES.signup, { method: "POST", headers: jsonHeaders, body: JSON.stringify(credentials) }, env);
   const res = await app.request(
-    "/v1/auth/login",
+    AUTH_ROUTES.login,
     { method: "POST", headers: jsonHeaders, body: JSON.stringify(credentials) },
     env,
   );
-  const { token } = await res.json<{ token: string }>();
+  const { token } = await res.json<AuthTokenResponse>();
   return { authorization: `Bearer ${token}` };
 }
 
 describe("POST /v1/sites", () => {
   it("requires a bearer token", async () => {
     const res = await app.request(
-      "/v1/sites",
+      SITES_ROUTES.root,
       { method: "POST", headers: jsonHeaders, body: JSON.stringify({ name: "example.com" }) },
       env,
     );
@@ -36,7 +32,7 @@ describe("POST /v1/sites", () => {
   it("creates a site owned by the authenticated user, with a public site key", async () => {
     const auth = await signupAndLogin("owner@example.com");
     const res = await app.request(
-      "/v1/sites",
+      SITES_ROUTES.root,
       { method: "POST", headers: { ...jsonHeaders, ...auth }, body: JSON.stringify({ name: "example.com" }) },
       env,
     );
@@ -53,18 +49,18 @@ describe("GET /v1/sites", () => {
     const bob = await signupAndLogin("bob@example.com");
 
     await app.request(
-      "/v1/sites",
+      SITES_ROUTES.root,
       { method: "POST", headers: { ...jsonHeaders, ...alice }, body: JSON.stringify({ name: "alice.example" }) },
       env,
     );
     await app.request(
-      "/v1/sites",
+      SITES_ROUTES.root,
       { method: "POST", headers: { ...jsonHeaders, ...bob }, body: JSON.stringify({ name: "bob.example" }) },
       env,
     );
 
-    const aliceSites = await (await app.request("/v1/sites", { headers: alice }, env)).json<SiteResponse[]>();
-    const bobSites = await (await app.request("/v1/sites", { headers: bob }, env)).json<SiteResponse[]>();
+    const aliceSites = await (await app.request(SITES_ROUTES.root, { headers: alice }, env)).json<SiteResponse[]>();
+    const bobSites = await (await app.request(SITES_ROUTES.root, { headers: bob }, env)).json<SiteResponse[]>();
 
     expect(aliceSites).toHaveLength(1);
     expect(aliceSites[0]).toMatchObject({ name: "alice.example" });

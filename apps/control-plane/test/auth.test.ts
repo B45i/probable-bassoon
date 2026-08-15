@@ -2,13 +2,11 @@ import { env } from "cloudflare:workers";
 import { sign } from "hono/jwt";
 import { describe, expect, it } from "vitest";
 import app from "../src/app";
+import { AUTH_ROUTES } from "../src/routes/paths";
+import type { AuthTokenResponse } from "../src/routes/auth/schemas";
+import type { ErrorBody } from "../src/lib/http";
 
 const jsonHeaders = { "content-type": "application/json" };
-
-interface AuthTokenResponse {
-  token: string;
-  expiresAt: string;
-}
 
 // vitest-pool-workers isolates storage per test *file*, not per `it()` — tests in this
 // file share one D1 instance, so each test needs its own email rather than a shared
@@ -18,11 +16,11 @@ function makeCredentials() {
 }
 
 async function signup(body: Record<string, unknown>) {
-  return app.request("/v1/auth/signup", { method: "POST", headers: jsonHeaders, body: JSON.stringify(body) }, env);
+  return app.request(AUTH_ROUTES.signup, { method: "POST", headers: jsonHeaders, body: JSON.stringify(body) }, env);
 }
 
 async function login(body: Record<string, unknown>) {
-  return app.request("/v1/auth/login", { method: "POST", headers: jsonHeaders, body: JSON.stringify(body) }, env);
+  return app.request(AUTH_ROUTES.login, { method: "POST", headers: jsonHeaders, body: JSON.stringify(body) }, env);
 }
 
 describe("POST /v1/auth/signup", () => {
@@ -67,13 +65,13 @@ describe("POST /v1/auth/login", () => {
     const unknownEmail = await login({ email: "nobody@example.com", password: "whatever123" });
     expect(wrongPassword.status).toBe(401);
     expect(unknownEmail.status).toBe(401);
-    expect(await wrongPassword.json<{ error: string }>()).toEqual(await unknownEmail.json<{ error: string }>());
+    expect(await wrongPassword.json<ErrorBody>()).toEqual(await unknownEmail.json<ErrorBody>());
   });
 });
 
 describe("GET /v1/auth/me", () => {
   it("requires a bearer token", async () => {
-    const res = await app.request("/v1/auth/me", {}, env);
+    const res = await app.request(AUTH_ROUTES.me, {}, env);
     expect(res.status).toBe(401);
   });
 
@@ -81,13 +79,13 @@ describe("GET /v1/auth/me", () => {
     const credentials = makeCredentials();
     await signup(credentials);
     const { token } = await (await login(credentials)).json<AuthTokenResponse>();
-    const res = await app.request("/v1/auth/me", { headers: { authorization: `Bearer ${token}` } }, env);
+    const res = await app.request(AUTH_ROUTES.me, { headers: { authorization: `Bearer ${token}` } }, env);
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ email: credentials.email });
   });
 
   it("rejects a garbage token", async () => {
-    const res = await app.request("/v1/auth/me", { headers: { authorization: "Bearer nonsense" } }, env);
+    const res = await app.request(AUTH_ROUTES.me, { headers: { authorization: "Bearer nonsense" } }, env);
     expect(res.status).toBe(401);
   });
 
@@ -98,7 +96,7 @@ describe("GET /v1/auth/me", () => {
       { sub: "someone", email: "x@example.com", createdAt: new Date().toISOString(), exp: Math.floor(Date.now() / 1000) + 3600 },
       "wrong-secret",
     );
-    const res = await app.request("/v1/auth/me", { headers: { authorization: `Bearer ${forged}` } }, env);
+    const res = await app.request(AUTH_ROUTES.me, { headers: { authorization: `Bearer ${forged}` } }, env);
     expect(res.status).toBe(401);
   });
 });
