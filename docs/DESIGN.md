@@ -208,7 +208,7 @@ flowchart TB
 
 **Rationale.** A single shared admin key can't answer "who did this" — the same key authorizes anyone who holds it, and revoking one person's access means rotating the key for everyone. Individual accounts fix both problems and cost little extra: sites already needed a public key (D1, §3.3) for the assignment path; this only adds the private, human-facing half. Because a site has exactly one owner, authorization is a single equality check (`sites.owner_user_id == current user`), not a role or permission system — no multi-editor case is being solved here (see Alternatives rejected).
 
-That still leaves the question of how a request proves *who's calling*. A server-side session record (one row per login, looked up on every request) is the conventional answer and was this document's first draft of D8. It was replaced: revocation — the entire reason a session record exists instead of a bare token — isn't a requirement anywhere in this system today. No admin UI, no compliance posture demanding an immediate kill switch on a leaked credential, nothing. Paying a lookup on every authenticated request to buy a capability nothing needs is the wrong trade. A JWT drops the lookup entirely: the token carries its own claims (user id, email, account creation date, expiry) and verification is a signature check, no I/O.
+That still leaves the question of how a request proves *who's calling*. The conventional answer is a server-side session record — one row per login, looked up on every request — but revocation, the entire reason a session record exists instead of a bare token, isn't a requirement anywhere in this system today. No admin UI, no compliance posture demanding an immediate kill switch on a leaked credential, nothing. Paying a lookup on every authenticated request to buy a capability nothing needs is the wrong trade. A JWT drops the lookup entirely: the token carries its own claims (user id, email, account creation date, expiry) and verification is a signature check, no I/O.
 
 **Two stores considered for that lookup, and rejected:**
 - **D1-backed sessions** (the original draft). Works, and gives real revocation — a working `/logout`, the ability to kill a specific compromised token immediately. Costs a DB round trip on every authenticated request for a capability this system doesn't currently use.
@@ -238,6 +238,15 @@ in_experiment = inclusion < exp.traffic_bp        // traffic in basis points, 10
 variant       = range_lookup(variant, variants)   // e.g. 50/40/10 →
                                                   // A:[0,4999] B:[5000,8999] control:[9000,9999]
 ```
+
+Bucketing is implemented with a small, well-established MurmurHash3 library. The
+bit-level operations involved — 32-bit rotation, overflow-safe multiplication, tail-byte
+handling for inputs that aren't a multiple of 4 bytes — are easy to get subtly wrong, and
+a defective hash wouldn't throw an error; it would quietly bias which bucket a visitor
+lands in, surfacing only later as an SRM alert (section 8.3) against live traffic rather
+than as a test failure. It's a single, narrow function, not a broader dependency tree, so
+pulling it in doesn't conflict with the assignment-path isolation principle in section
+3.2.
 
 ### 5.2 Properties
 
@@ -426,11 +435,13 @@ POST /v1/sites/:siteId/experiments                # create: variants, weights, t
 POST /v1/sites/:siteId/experiments/:key/status     # running | paused (kill switch)
 POST /v1/sites/:siteId/experiments/:key/generate   # async LLM copy generation (authoring aid) — not yet built
 
-# Critical path (site key, CORS-scoped) — not yet built
-GET  /v1/assign?visitor_id=…&experiments=key1,key2
+# Critical path (site key, CORS-scoped)
+GET  /v1/assign?site_key=…&visitor_id=…&experiments=key1,key2
   → 200 { "assignments": [ { "experiment": "hero_copy", "variant": "b",
            "content": { "headline": "…", "cta": "…" } } ] }
   # experiments the visitor is not part of are simply omitted — absence means "show default"
+  # site_key as a query param, not a header, keeps this a CORS "simple request" so a
+  # cross-origin call from the customer's page never pays a preflight round trip
 
 # Tracking (site key, sendBeacon-compatible, always 202) — not yet built
 POST /v1/events/exposure    { visitor_id, experiment, variant }
