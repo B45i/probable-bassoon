@@ -14,3 +14,6 @@ apps/*/openapi.json
 apps/assignment/src/generated/
 .wrangler-state/*
 docs/design.simple.md
+
+# packages/perf's own throwaway test data, from `pnpm seed` — not fixtures to check in
+packages/perf/.perf-seed.json
