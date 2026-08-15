@@ -4,7 +4,9 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
 
-export function CopyApiKeyButton({ apiKey }: { apiKey: string }) {
+/** Generic copy-to-clipboard icon button — the site key and the embed snippet both need
+ * one, and the only thing that differs between them is the text and the toast label. */
+export function CopyTextButton({ text, label }: { text: string; label: string }) {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -14,15 +16,15 @@ export function CopyApiKeyButton({ apiKey }: { apiKey: string }) {
   }, [copied])
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(apiKey)
+    await navigator.clipboard.writeText(text)
     setCopied(true)
-    toast.add({ title: "API key copied", type: "success" })
+    toast.add({ title: `${label} copied`, type: "success" })
   }
 
   return (
     <Button type="button" variant="ghost" size="icon-xs" onClick={handleCopy}>
       {copied ? <IconCheck className="text-primary" /> : <IconCopy />}
-      <span className="sr-only">Copy API key</span>
+      <span className="sr-only">Copy {label}</span>
     </Button>
   )
 }

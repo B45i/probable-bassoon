@@ -5,16 +5,9 @@ import { useSetAtom } from "jotai"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { initials } from "@/lib/initials"
 
 import { authTokenAtom } from "./auth-store"
-
-function initialsFromEmail(email: string): string {
-  const [localPart] = email.split("@")
-  const segments = localPart.split(/[._-]+/).filter(Boolean)
-  const chars =
-    segments.length > 1 ? segments.slice(0, 2).map((segment) => segment[0]) : [...localPart.slice(0, 2)]
-  return chars.join("").toUpperCase()
-}
 
 export function UserMenu() {
   const setToken = useSetAtom(authTokenAtom)
@@ -23,7 +16,9 @@ export function UserMenu() {
   return (
     <div className="flex items-center gap-2 px-1 py-1">
       <Avatar size="sm">
-        <AvatarFallback>{me.data ? initialsFromEmail(me.data.email) : "…"}</AvatarFallback>
+        <AvatarFallback>
+          {me.data ? initials(me.data.email.split("@")[0] ?? "", /[._-]+/) : "…"}
+        </AvatarFallback>
       </Avatar>
       <span className="flex-1 truncate text-xs text-sidebar-foreground/70">{me.data?.email}</span>
       <Button variant="ghost" size="icon-sm" onClick={() => setToken(null)}>

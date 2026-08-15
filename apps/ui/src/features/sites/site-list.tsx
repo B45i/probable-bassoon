@@ -1,8 +1,10 @@
 import type { GetV1SitesResponse } from "@ab-tester/api-client"
-import { IconChevronRight, IconWorld } from "@tabler/icons-react"
+import { IconChevronRight } from "@tabler/icons-react"
 import { Link } from "react-router"
 
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
+import { initials } from "@/lib/initials"
 import { sitePath } from "@/routes"
 
 import { ExperimentCount } from "../experiments/experiment-count"
@@ -23,9 +25,11 @@ export function SiteList({ sites }: { sites: GetV1SitesResponse }) {
           <Link to={sitePath(site.id)} className="block">
             <Card className="transition-colors hover:bg-muted/40">
               <CardContent className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <IconWorld className="size-4 text-muted-foreground" />
-                  <span className="text-sm font-semibold">{site.name}</span>
+                <div className="flex items-center gap-3">
+                  <Avatar>
+                    <AvatarFallback>{initials(site.name)}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-base font-semibold">{site.name}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <ExperimentCount siteId={site.id} />
