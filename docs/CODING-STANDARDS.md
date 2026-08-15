@@ -1,12 +1,14 @@
 # Coding standards
 
-Conventions for the API surface in `apps/control-plane` (and `apps/assignment` once it
-grows past a single route). These aren't style preferences — each one is here because a
+Conventions for this codebase's application code: the API surface in
+`apps/control-plane` (and `apps/assignment` once it grows past a single route), and the
+React app in `apps/ui`. These aren't style preferences — each one is here because a
 specific piece of duplicated or scattered code caused a real problem: a route whose path
 was typed out by hand in four places and could silently drift, response shapes
 reconstructed twice in the same file, test types hand-copied from schemas that already
-defined them. `routes/auth/` and `routes/sites/` are the reference implementation —
-when in doubt, match what they do.
+defined them. `routes/auth/` and `routes/sites/` are the reference implementation for
+the API; `features/sites/` and `features/experiments/` are the reference implementation
+for the UI — when in doubt, match what they do.
 
 ## Route file layout
 
@@ -114,3 +116,66 @@ not the test.
   `SiteResponse`).
 - Path constants: `SCREAMING_SNAKE_CASE`, grouped per resource (`AUTH_PATHS.signup`,
   `AUTH_ROUTES.signup` for the full composed path).
+
+## UI (`apps/ui`)
+
+The React app follows the same "one definition, everything else imports it" rule as the
+API, applied to a different shape of duplication — a component copy-pasted into two
+features instead of shared, a route typed out by hand in a `navigate()` call instead of
+imported.
+
+### Feature layout is colocation, not layers
+
+No top-level `pages/`, `hooks/`, or `components/` holding every feature's files. Each
+feature owns one directory under `features/`:
+
+```
+features/<feature>/
+  <name>.page.tsx     a routed page — one file per route this feature owns
+  <thing>.tsx         a component only this feature uses
+  <name>-store.ts     feature-local state (e.g. a jotai atom), if it has any
+```
+
+A component moves to the shared `components/` only once a second feature actually needs
+it — nothing gets promoted there on spec.
+
+### Pages end in `.page.tsx`
+
+The one file per feature that a `<Route>` in `app.tsx` points at (`login.page.tsx`,
+`sites.page.tsx`). Everything else in the directory is a plain component or helper the
+page is built from — the suffix is what tells you, scanning a directory listing, which
+files are reachable by URL and which aren't.
+
+### No magic strings
+
+Same rule as `routes/paths.ts` above, covering the two places a UI accumulates string
+literals that a route path doesn't:
+
+- **Route paths** — `routes.ts` is the react-router counterpart to `routes/paths.ts`.
+  `app.tsx`'s `<Route path>` declarations and every page's `navigate()` / `<Link to>`
+  call import from there; a param'd path gets a small builder function next to it
+  (`experimentResultsPath(siteId, key)`), the same way `apps/control-plane`'s
+  `experimentsRoute(siteId)` does.
+- **Anything read back later by name** — a `localStorage` key, a `useQueryState` search
+  param — gets a named constant at its point of definition
+  (`features/auth/auth-store.ts`'s `AUTH_TOKEN_STORAGE_KEY`,
+  `features/experiments/experiment-results.page.tsx`'s `GOAL_PARAM`), not a string
+  retyped at every call site. Colocated with the one file that owns it, the same way
+  `mappers.ts` only exists once a row is exposed in more than one route — no shared
+  `constants.ts` until a second file actually needs the same one.
+
+### File naming
+
+Every file in `apps/ui` is kebab-case (`experiment-results.page.tsx`,
+`require-auth.tsx`) — including component files, not the PascalCase-matches-the-export
+convention common elsewhere in React. The export inside still follows normal casing
+(`ExperimentResultsPage` for a component, `configureApiAuth` for a function); the rule
+is about the filename, not the identifier.
+
+### One generated client, configured once
+
+Every request goes through `@ab-tester/api-client`'s generated functions — a page calls
+`getV1SitesOptions()`, never a hand-written `axios`/`fetch` call of its own. Auth is the
+same story as `requireAuth` on the API side: `features/auth/auth-client.ts` configures
+the shared client's `auth` callback once, at startup, instead of every page attaching
+its own `Authorization` header.
