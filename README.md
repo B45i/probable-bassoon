@@ -15,6 +15,34 @@ Built on Cloudflare's edge platform:
 - **Durable Objects** — exposure tracking, sharded per experiment
 - **D1** — experiment/variant configuration and conversion events
 
+## Running locally
+
+**Setup (once):**
+
+```
+pnpm install
+cp apps/control-plane/.dev.vars.example apps/control-plane/.dev.vars   # then fill in JWT_SECRET
+pnpm --filter @ab-tester/control-plane db:migrate:local                # applies D1 migrations to local dev state
+```
+
+**Run:**
+
+```
+pnpm dev
+```
+
+Starts both Workers together (via Turborepo) plus `packages/snippet`'s watch build:
+
+- Control plane (auth, sites, config, tracking, results) → `http://localhost:8787`
+- Assignment (the `/v1/assign` + `/snippet.js` Worker) → `http://localhost:8788`
+
+The two are separate `wrangler dev` processes, so by default each simulates its own local KV/D1/Durable Object storage — Assignment would never see what Config just wrote. Both `dev` scripts pass `--persist-to ../../.wrangler-state` to point at one shared directory instead, so a KV write in control-plane is actually visible to a read in assignment, matching how they'd behave in production (one real KV namespace, two Workers).
+
+**Testing:**
+
+- `pnpm test` runs the full automated suite (`vitest` + `@cloudflare/vitest-pool-workers`, real Workers runtime semantics — no dev server needed).
+- There's no admin UI yet, so exercising the running system by hand means calling the API directly — `curl`, or import each Worker's `GET /openapi.json` into something like Postman/Insomnia for a browsable version. Typical flow: sign up → log in → create a site → create an experiment → set it `running` → `GET /v1/assign` on the Assignment Worker with that site's key.
+
 ## Documentation
 
 - [`docs/DESIGN.md`](docs/DESIGN.md) — the system design: architecture, key decisions, determinism, scale, reliability, correctness, and the LLM integration
