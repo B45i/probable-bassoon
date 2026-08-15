@@ -1,0 +1,9 @@
+{
+  // scripts/ is deliberately excluded: it runs under plain Node (tsx), not the Workers
+  // runtime this tsconfig types against, and has its own tsconfig.scripts.json.
+  "extends": "@ab-tester/tsconfig/workers.json",
+  "compilerOptions": {
+    "types": ["@cloudflare/workers-types", "vitest/globals"]
+  },
+  "include": ["src", "test", "vitest.config.ts"]
+}
