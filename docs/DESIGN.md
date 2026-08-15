@@ -164,9 +164,9 @@ flowchart TB
 
 ### D3 — Exposure tracking is sharded per experiment using Durable Objects
 
-**Decision.** Each experiment gets its own Durable Object, addressed by `(site_id, experiment_id)`. Exposure events route to that experiment's object, which enforces the dedupe rule — first exposure wins — against its own attached SQLite storage, keyed on `visitor_id`.
+**Decision.** Each experiment gets its own Durable Object, addressed by name — `{site_key}:{experiment_key}`, built directly from the incoming request. Exposure events route to that experiment's object, which enforces the dedupe rule — first exposure wins — against its own attached SQLite storage, keyed on `visitor_id`.
 
-**Rationale.** A single D1 database is single-writer under the hood: every write across every experiment on the whole platform would serialize through one write queue. Sharding by experiment turns that one queue into as many independent queues as there are experiments running concurrently. Write throughput scales with the number of experiments, not with the volume any one of them generates, so a single hot experiment never limits the write capacity available to every other experiment.
+**Rationale.** A single D1 database is single-writer under the hood: every write across every experiment on the whole platform would serialize through one write queue. Sharding by experiment turns that one queue into as many independent queues as there are experiments running concurrently. Write throughput scales with the number of experiments, not with the volume any one of them generates, so a single hot experiment never limits the write capacity available to every other experiment. Naming the object from the request's own site key and experiment key, rather than their internal database ids, also means routing an exposure event costs nothing beyond the write itself — there's no lookup to translate one into the other first.
 
 **Alternatives rejected.** D1 for exposures (single-writer ceiling, see above); KV for exposures (no transactions or uniqueness constraint — cannot enforce "first exposure wins" on its own).
 
@@ -176,7 +176,7 @@ flowchart TB
 
 ### D4 — Conversions are stored centrally in D1, not sharded; attribution happens in the Results worker
 
-**Decision.** A conversion is recorded as `(visitor_id, goal, timestamp)` in D1, not in any experiment's Durable Object. It carries no experiment context — a conversion event doesn't know in advance which experiment or experiments it should credit.
+**Decision.** A conversion is recorded as `(site_key, visitor_id, goal, timestamp)` in D1, not in any experiment's Durable Object. It carries no experiment context — a conversion event doesn't know in advance which experiment or experiments it should credit. It's keyed by the site's public key rather than its internal id, the same choice and the same reason as exposure routing above: the event only ever carries the public key, and writing it through unchanged avoids a lookup that would buy nothing.
 
 **Rationale.** Exposures route cleanly to one object because each exposure belongs to exactly one experiment; a conversion has no single natural shard to route to, since a visitor may have been exposed to several experiments before converting. Rather than force a sharding scheme onto data that doesn't shard naturally, conversions stay in one place. This is also the lower-volume side of the relationship — not every visitor converts — so D1's write-throughput ceiling is far less likely to be tested by conversions specifically than it would be by exposures.
 
@@ -443,9 +443,9 @@ GET  /v1/assign?site_key=…&visitor_id=…&experiments=key1,key2
   # site_key as a query param, not a header, keeps this a CORS "simple request" so a
   # cross-origin call from the customer's page never pays a preflight round trip
 
-# Tracking (site key, sendBeacon-compatible, always 202) — not yet built
-POST /v1/events/exposure    { visitor_id, experiment, variant }
-POST /v1/events/conversion  { visitor_id, goal }
+# Tracking (site key, sendBeacon-compatible, always 202)
+POST /v1/events/exposure?site_key=…    { visitor_id, experiment, variant }
+POST /v1/events/conversion?site_key=…  { visitor_id, goal }
 
 # Results (bearer token; site must be owned by the authenticated user) — not yet built
 GET  /v1/sites/:siteId/experiments/:key/results?goal=signup
@@ -502,17 +502,17 @@ CREATE TABLE variants (
 -- Conversions stay centralized here (D4): lower volume than exposures,
 -- no natural single shard to route to, dedupe still needs just one constraint.
 CREATE TABLE conversions (
-  site_id    TEXT    NOT NULL,
+  site_key   TEXT    NOT NULL,                  -- the site's public key, not sites.id
   visitor_id TEXT    NOT NULL,
   goal_key   TEXT    NOT NULL,
   first_ts   INTEGER NOT NULL,
-  PRIMARY KEY (site_id, visitor_id, goal_key)   -- first conversion per goal wins
+  PRIMARY KEY (site_key, visitor_id, goal_key)   -- first conversion per goal wins
 );
 ```
 
 ### B.2 Durable Object storage — one instance per experiment
 
-Each object is addressed by `(site_id, experiment_id)`, so routing an incoming exposure event to the right shard is a lookup, not a broadcast. Its attached SQLite storage holds only that experiment's exposures:
+Each object is addressed by name — `{site_key}:{experiment_key}`, built directly from the incoming request — so routing an incoming exposure event to the right shard costs nothing beyond the object lookup itself: no database read to resolve an id first, no broadcast to every shard. Its attached SQLite storage holds only that experiment's exposures:
 
 ```sql
 CREATE TABLE exposures (

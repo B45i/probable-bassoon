@@ -61,3 +61,13 @@ export const EXPERIMENT_PATHS = {
 export const experimentsRoute = (siteId: string): string => `${SITES_BASE}/${siteId}/experiments`;
 export const experimentStatusRoute = (siteId: string, key: string): string =>
   `${SITES_BASE}/${siteId}/experiments/${key}/status`;
+
+export const EVENTS_BASE = "/v1/events";
+export const EVENTS_PATHS = {
+  exposure: "/exposure",
+  conversion: "/conversion",
+} as const;
+export const EVENTS_ROUTES = {
+  exposure: composePath(EVENTS_BASE, EVENTS_PATHS.exposure),
+  conversion: composePath(EVENTS_BASE, EVENTS_PATHS.conversion),
+} as const;

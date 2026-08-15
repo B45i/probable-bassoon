@@ -101,16 +101,23 @@ export type NewVariant = InferInsertModel<typeof variants>;
 // exposures, and no natural single shard to route to — a visitor may have been exposed
 // to several experiments before converting, so a conversion doesn't know in advance
 // which one to credit. Dedupe still needs just one constraint (the primary key below).
+//
+// Keyed by the site's public key, not `sites.id`: Tracking (the only writer) only ever
+// has the public key from the incoming request, the same situation Assignment is in for
+// KV, and the same reasoning applies — writing it through unchanged avoids a lookup that
+// would buy nothing. Results (the only reader) already has it for free too: it loads the
+// site row to check ownership before querying anything, and that row already carries the
+// public key alongside the id.
 export const conversions = sqliteTable(
   "conversions",
   {
-    siteId: text("site_id").notNull(),
+    siteKey: text("site_key").notNull(),
     visitorId: text("visitor_id").notNull(),
     goalKey: text("goal_key").notNull(),
     firstTs: integer("first_ts", { mode: "timestamp" }).notNull(),
   },
   // First conversion per goal wins.
-  (table) => [primaryKey({ columns: [table.siteId, table.visitorId, table.goalKey] })],
+  (table) => [primaryKey({ columns: [table.siteKey, table.visitorId, table.goalKey] })],
 );
 
 export type Conversion = InferSelectModel<typeof conversions>;

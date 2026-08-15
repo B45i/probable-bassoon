@@ -17,7 +17,7 @@ declare global {
       EXPERIMENT_CONFIG: KVNamespace;
       /** Experiment/variant config and conversions. */
       DB: D1Database;
-      /** One object per experiment, addressed by (site_id, experiment_id). */
+      /** One object per experiment, addressed by name (`{site_key}:{experiment_key}`). */
       EXPOSURES: DurableObjectNamespace<ExperimentExposures>;
       /** Worker secret, not declared in wrangler.jsonc — signs/verifies admin JWTs.
        * Local dev: apps/control-plane/.dev.vars (see .dev.vars.example). Deploy:

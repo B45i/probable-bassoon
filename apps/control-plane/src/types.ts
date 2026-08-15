@@ -1,4 +1,5 @@
 import type { Database } from "@ab-tester/db";
+import type { ExperimentExposures } from "./durable-objects/experiment-exposures";
 
 export interface AuthenticatedUser {
   id: string;
@@ -12,13 +13,15 @@ export interface AuthenticatedUser {
  * this, not a bare `{ Bindings: Env }`, so `c.get(...)` is typed wherever the relevant
  * middleware has run. `db` is set unconditionally by lib/db.ts's attachDb on every
  * resource sub-app that needs it; `kv` likewise by lib/kv.ts's attachKv (routes/experiments
- * only — nothing else in this Worker writes to KV); `user` only after
- * lib/auth/middleware.ts's requireAuth. */
+ * only); `exposures` by lib/exposures.ts's attachExposures (routes/tracking only —
+ * everything else that needs D1 goes through `db`, and this Worker's other DO-shaped
+ * data doesn't exist); `user` only after lib/auth/middleware.ts's requireAuth. */
 export type AppEnv = {
   Bindings: Env;
   Variables: {
     db: Database;
     kv: KVNamespace;
+    exposures: DurableObjectNamespace<ExperimentExposures>;
     user: AuthenticatedUser;
   };
 };
