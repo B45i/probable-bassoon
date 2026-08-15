@@ -4,8 +4,8 @@ import { type DefaultError, queryOptions, type UseMutationOptions } from '@tanst
 import type { AxiosError } from 'axios';
 
 import { client } from '../client.gen';
-import { getHealth, getV1AuthMe, getV1Sites, getV1SitesBySiteIdExperimentsByKeyResults, type Options, postV1AuthLogin, postV1AuthSignup, postV1EventsConversion, postV1EventsExposure, postV1Sites, postV1SitesBySiteIdExperiments, postV1SitesBySiteIdExperimentsByKeyStatus } from '../sdk.gen';
-import type { GetHealthData, GetHealthResponse, GetV1AuthMeData, GetV1AuthMeError, GetV1AuthMeResponse, GetV1SitesBySiteIdExperimentsByKeyResultsData, GetV1SitesBySiteIdExperimentsByKeyResultsError, GetV1SitesBySiteIdExperimentsByKeyResultsResponse, GetV1SitesData, GetV1SitesError, GetV1SitesResponse, PostV1AuthLoginData, PostV1AuthLoginError, PostV1AuthLoginResponse, PostV1AuthSignupData, PostV1AuthSignupError, PostV1AuthSignupResponse, PostV1EventsConversionData, PostV1EventsExposureData, PostV1SitesBySiteIdExperimentsByKeyStatusData, PostV1SitesBySiteIdExperimentsByKeyStatusError, PostV1SitesBySiteIdExperimentsByKeyStatusResponse, PostV1SitesBySiteIdExperimentsData, PostV1SitesBySiteIdExperimentsError, PostV1SitesBySiteIdExperimentsResponse, PostV1SitesData, PostV1SitesError, PostV1SitesResponse } from '../types.gen';
+import { getHealth, getV1AuthMe, getV1Sites, getV1SitesBySiteIdExperiments, getV1SitesBySiteIdExperimentsByKeyResults, type Options, postV1AuthLogin, postV1AuthSignup, postV1EventsConversion, postV1EventsExposure, postV1Sites, postV1SitesBySiteIdExperiments, postV1SitesBySiteIdExperimentsByKeyStatus } from '../sdk.gen';
+import type { GetHealthData, GetHealthResponse, GetV1AuthMeData, GetV1AuthMeError, GetV1AuthMeResponse, GetV1SitesBySiteIdExperimentsByKeyResultsData, GetV1SitesBySiteIdExperimentsByKeyResultsError, GetV1SitesBySiteIdExperimentsByKeyResultsResponse, GetV1SitesBySiteIdExperimentsData, GetV1SitesBySiteIdExperimentsError, GetV1SitesBySiteIdExperimentsResponse, GetV1SitesData, GetV1SitesError, GetV1SitesResponse, PostV1AuthLoginData, PostV1AuthLoginError, PostV1AuthLoginResponse, PostV1AuthSignupData, PostV1AuthSignupError, PostV1AuthSignupResponse, PostV1EventsConversionData, PostV1EventsExposureData, PostV1SitesBySiteIdExperimentsByKeyStatusData, PostV1SitesBySiteIdExperimentsByKeyStatusError, PostV1SitesBySiteIdExperimentsByKeyStatusResponse, PostV1SitesBySiteIdExperimentsData, PostV1SitesBySiteIdExperimentsError, PostV1SitesBySiteIdExperimentsResponse, PostV1SitesData, PostV1SitesError, PostV1SitesResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseURL' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -126,6 +126,21 @@ export const postV1SitesMutation = (options?: Partial<Options<PostV1SitesData>>)
     };
     return mutationOptions;
 };
+
+export const getV1SitesBySiteIdExperimentsQueryKey = (options: Options<GetV1SitesBySiteIdExperimentsData>) => createQueryKey('getV1SitesBySiteIdExperiments', options);
+
+export const getV1SitesBySiteIdExperimentsOptions = (options: Options<GetV1SitesBySiteIdExperimentsData>) => queryOptions<GetV1SitesBySiteIdExperimentsResponse, AxiosError<GetV1SitesBySiteIdExperimentsError>, GetV1SitesBySiteIdExperimentsResponse, ReturnType<typeof getV1SitesBySiteIdExperimentsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getV1SitesBySiteIdExperiments({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getV1SitesBySiteIdExperimentsQueryKey(options)
+});
 
 export const postV1SitesBySiteIdExperimentsMutation = (options?: Partial<Options<PostV1SitesBySiteIdExperimentsData>>): UseMutationOptions<PostV1SitesBySiteIdExperimentsResponse, AxiosError<PostV1SitesBySiteIdExperimentsError>, Options<PostV1SitesBySiteIdExperimentsData>> => {
     const mutationOptions: UseMutationOptions<PostV1SitesBySiteIdExperimentsResponse, AxiosError<PostV1SitesBySiteIdExperimentsError>, Options<PostV1SitesBySiteIdExperimentsData>> = {

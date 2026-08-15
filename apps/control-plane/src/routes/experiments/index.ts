@@ -10,8 +10,9 @@ import { createExperimentBodySchema, experimentResponseSchema, setStatusBodySche
 
 // Two apps, not one — see routes/paths.ts's EXPERIMENTS_BASE/EXPERIMENT_BASE comment for
 // why (an @hono/zod-openapi limitation, not a routing need): every path param has to
-// live in the mount prefix, so "collection" (create) and "by key" (status, and later
-// generate/results) can't share a single mount point once status needs its own `:key`.
+// live in the mount prefix, so "collection" (create, list) and "by key" (status, and
+// later generate/results) can't share a single mount point once status needs its own
+// `:key`.
 
 const siteIdParam = z.object({ siteId: z.string() });
 
@@ -48,6 +49,24 @@ collectionRoutes.openapi(createExperimentRoute, async (c) => {
   if (result.status === 201) return c.json(result.body, 201);
   if (result.status === 404) return c.json(result.body, 404);
   return c.json(result.body, 409);
+});
+
+const listExperimentsRoute = createRoute({
+  method: "get",
+  path: EXPERIMENTS_PATHS.root,
+  security: BEARER_AUTH,
+  middleware: [requireAuth] as const,
+  request: { params: siteIdParam },
+  responses: {
+    200: { description: "Experiments for this site", content: jsonContent(z.array(experimentResponseSchema)) },
+    404: errorResponseSpec("Site not found"),
+  },
+});
+
+collectionRoutes.openapi(listExperimentsRoute, async (c) => {
+  const { siteId } = c.req.valid("param");
+  const result = await handlers.listExperiments({ db: c.get("db"), siteId, ownerUserId: c.get("user").id });
+  return result.status === 200 ? c.json(result.body, 200) : c.json(result.body, 404);
 });
 
 export const byKeyRoutes = new OpenAPIHono<AppEnv>();

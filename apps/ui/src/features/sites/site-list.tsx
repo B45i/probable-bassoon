@@ -1,10 +1,11 @@
 import type { GetV1SitesResponse } from "@ab-tester/api-client"
-import { IconKey, IconWorld } from "@tabler/icons-react"
+import { IconChevronRight, IconWorld } from "@tabler/icons-react"
+import { Link } from "react-router"
 
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
+import { sitePath } from "@/routes"
 
-import { CreateExperimentDialog } from "../experiments/create-experiment-dialog"
-import { CopyApiKeyButton } from "./copy-api-key-button"
+import { ExperimentCount } from "../experiments/experiment-count"
 
 export function SiteList({ sites }: { sites: GetV1SitesResponse }) {
   if (sites.length === 0) {
@@ -19,24 +20,20 @@ export function SiteList({ sites }: { sites: GetV1SitesResponse }) {
     <ul className="flex flex-col gap-3">
       {sites.map((site) => (
         <li key={site.id}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <IconWorld className="size-4 text-muted-foreground" />
-                {site.name}
-              </CardTitle>
-              <CardAction>
-                <CreateExperimentDialog siteId={site.id} />
-              </CardAction>
-            </CardHeader>
-            <CardContent>
-              <div className="flex w-fit items-center gap-2 border bg-muted/40 py-1 pr-1 pl-2">
-                <IconKey className="size-3.5 shrink-0 text-muted-foreground" />
-                <code className="text-xs text-muted-foreground">{site.apiKey}</code>
-                <CopyApiKeyButton apiKey={site.apiKey} />
-              </div>
-            </CardContent>
-          </Card>
+          <Link to={sitePath(site.id)} className="block">
+            <Card className="transition-colors hover:bg-muted/40">
+              <CardContent className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <IconWorld className="size-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold">{site.name}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <ExperimentCount siteId={site.id} />
+                  <IconChevronRight className="size-4 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         </li>
       ))}
     </ul>

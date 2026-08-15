@@ -110,6 +110,53 @@ describe("POST /v1/sites/:siteId/experiments", () => {
   });
 });
 
+describe("GET /v1/sites/:siteId/experiments", () => {
+  it("requires a bearer token", async () => {
+    const auth = await signupAndLogin();
+    const site = await createSite(auth);
+    const res = await app.request(experimentsRoute(site.id), { headers: jsonHeaders }, env);
+    expect(res.status).toBe(401);
+  });
+
+  it("404s for a site the caller doesn't own", async () => {
+    const owner = await signupAndLogin();
+    const attacker = await signupAndLogin();
+    const site = await createSite(owner);
+
+    const res = await app.request(experimentsRoute(site.id), { headers: { ...jsonHeaders, ...attacker } }, env);
+    expect(res.status).toBe(404);
+  });
+
+  it("returns an empty list for a site with no experiments yet", async () => {
+    const auth = await signupAndLogin();
+    const site = await createSite(auth);
+
+    const res = await app.request(experimentsRoute(site.id), { headers: { ...jsonHeaders, ...auth } }, env);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([]);
+  });
+
+  it("returns every experiment created for the site, most recent first", async () => {
+    const auth = await signupAndLogin();
+    const site = await createSite(auth);
+    await app.request(
+      experimentsRoute(site.id),
+      { method: "POST", headers: { ...jsonHeaders, ...auth }, body: JSON.stringify(validBody("first")) },
+      env,
+    );
+    await app.request(
+      experimentsRoute(site.id),
+      { method: "POST", headers: { ...jsonHeaders, ...auth }, body: JSON.stringify(validBody("second")) },
+      env,
+    );
+
+    const res = await app.request(experimentsRoute(site.id), { headers: { ...jsonHeaders, ...auth } }, env);
+    expect(res.status).toBe(200);
+    const experiments = await res.json<ExperimentResponse[]>();
+    expect(experiments.map((e) => e.key)).toEqual(["second", "first"]);
+  });
+});
+
 describe("POST /v1/sites/:siteId/experiments/:key/status", () => {
   async function createExperiment(auth: { authorization: string }, siteId: string) {
     const res = await app.request(

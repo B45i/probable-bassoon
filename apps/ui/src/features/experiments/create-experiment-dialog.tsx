@@ -1,7 +1,7 @@
-import { postV1SitesBySiteIdExperimentsMutation } from "@ab-tester/api-client"
+import { getV1SitesBySiteIdExperimentsQueryKey, postV1SitesBySiteIdExperimentsMutation } from "@ab-tester/api-client"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { IconPlus } from "@tabler/icons-react"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { useNavigate } from "react-router"
@@ -37,6 +37,7 @@ type CreateExperimentInput = z.infer<typeof createExperimentSchema>
 export function CreateExperimentDialog({ siteId }: { siteId: string }) {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const {
     register,
     handleSubmit,
@@ -62,6 +63,9 @@ export function CreateExperimentDialog({ siteId }: { siteId: string }) {
       },
       {
         onSuccess: (experiment) => {
+          void queryClient.invalidateQueries({
+            queryKey: getV1SitesBySiteIdExperimentsQueryKey({ path: { siteId } }),
+          })
           setOpen(false)
           navigate(experimentResultsPath(experiment.siteId, experiment.key))
         },

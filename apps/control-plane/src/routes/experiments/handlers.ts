@@ -1,6 +1,6 @@
 import { experiments, sites, variants, type Database, type NewExperiment, type NewVariant } from "@ab-tester/db";
 import { experimentConfigKey, experimentConfigSchema } from "@ab-tester/shared";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 import { toHex } from "../../lib/encoding";
 import type { ErrorBody } from "../../lib/http";
@@ -77,6 +77,41 @@ export async function createExperiment(input: CreateExperimentInput): Promise<Cr
   await writeThroughKv(kv, site.apiKey, createdExperiment, createdVariants);
 
   return { status: 201, body: toExperimentResponse(createdExperiment, createdVariants) };
+}
+
+interface ListExperimentsInput {
+  db: Database;
+  siteId: string;
+  ownerUserId: string;
+}
+
+type ListExperimentsResult = { status: 200; body: ExperimentResponse[] } | { status: 404; body: ErrorBody };
+
+export async function listExperiments(input: ListExperimentsInput): Promise<ListExperimentsResult> {
+  const { db, siteId, ownerUserId } = input;
+
+  const site = await db
+    .select()
+    .from(sites)
+    .where(eq(sites.id, siteId))
+    .limit(1)
+    .then((rows) => rows[0]);
+  if (!isOwnedBy(site, ownerUserId)) {
+    return SITE_NOT_FOUND;
+  }
+
+  const rows = await db.query.experiments.findMany({
+    where: eq(experiments.siteId, siteId),
+    // `createdAt` alone isn't fine-grained enough to break a tie — it's stored to the
+    // second (packages/db/src/schema.ts's `mode: "timestamp"`), so two experiments
+    // created within the same second sort arbitrarily by that column alone. `id` breaks
+    // the tie because it's a UUIDv7: lexicographically sortable by creation time at
+    // sub-millisecond precision, unlike the column dedicated to that job.
+    orderBy: [desc(experiments.createdAt), desc(experiments.id)],
+    with: { variants: true },
+  });
+
+  return { status: 200, body: rows.map((row) => toExperimentResponse(row, row.variants)) };
 }
 
 interface SetExperimentStatusInput extends SetStatusBody {

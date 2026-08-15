@@ -1,4 +1,4 @@
-import { getV1SitesBySiteIdExperimentsByKeyResultsOptions } from "@ab-tester/api-client"
+import { getV1SitesBySiteIdExperimentsByKeyResultsOptions, getV1SitesBySiteIdExperimentsOptions } from "@ab-tester/api-client"
 import { useQuery } from "@tanstack/react-query"
 import { parseAsString, useQueryState } from "nuqs"
 import { useParams } from "react-router"
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-import { ExperimentStatusActions } from "./experiment-status-actions"
+import { ExperimentStatusAction } from "./experiment-status-action"
 import { ResultsTable } from "./results-table"
 
 // The goal to report on is view state, not app state — it belongs in the URL (so a
@@ -16,10 +16,13 @@ const GOAL_PARAM = "goal"
 
 export function ExperimentResultsPage() {
   const { siteId, key } = useParams<{ siteId: string; key: string }>()
-  const [goal, setGoal] = useQueryState(
-    GOAL_PARAM,
-    parseAsString.withDefault("")
-  )
+  const [goal, setGoal] = useQueryState(GOAL_PARAM, parseAsString.withDefault(""))
+
+  const experiments = useQuery({
+    ...getV1SitesBySiteIdExperimentsOptions({ path: { siteId: siteId ?? "" } }),
+    enabled: Boolean(siteId),
+  })
+  const experiment = experiments.data?.find((e) => e.key === key)
 
   const results = useQuery({
     ...getV1SitesBySiteIdExperimentsByKeyResultsOptions({
@@ -32,10 +35,12 @@ export function ExperimentResultsPage() {
   if (!siteId || !key) return null
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-lg font-medium">{key}</h1>
-        <ExperimentStatusActions siteId={siteId} experimentKey={key} />
+        {experiment && (
+          <ExperimentStatusAction siteId={siteId} experimentKey={key} status={experiment.status} />
+        )}
       </div>
 
       <div className="flex items-end gap-2">

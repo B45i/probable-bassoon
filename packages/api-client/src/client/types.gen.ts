@@ -186,6 +186,52 @@ export type PostV1SitesResponses = {
 
 export type PostV1SitesResponse = PostV1SitesResponses[keyof PostV1SitesResponses];
 
+export type GetV1SitesBySiteIdExperimentsData = {
+    body?: never;
+    path: {
+        siteId: string;
+    };
+    query?: never;
+    url: '/v1/sites/{siteId}/experiments';
+};
+
+export type GetV1SitesBySiteIdExperimentsErrors = {
+    /**
+     * Site not found
+     */
+    404: {
+        error: string;
+    };
+};
+
+export type GetV1SitesBySiteIdExperimentsError = GetV1SitesBySiteIdExperimentsErrors[keyof GetV1SitesBySiteIdExperimentsErrors];
+
+export type GetV1SitesBySiteIdExperimentsResponses = {
+    /**
+     * Experiments for this site
+     */
+    200: Array<{
+        id: string;
+        siteId: string;
+        key: string;
+        version: number;
+        status: 'draft' | 'running' | 'paused' | 'archived';
+        trafficBp: number;
+        createdAt: string;
+        variants: Array<{
+            id: string;
+            key: string;
+            weightBp: number;
+            isControl: boolean;
+            content: {
+                [key: string]: unknown;
+            };
+        }>;
+    }>;
+};
+
+export type GetV1SitesBySiteIdExperimentsResponse = GetV1SitesBySiteIdExperimentsResponses[keyof GetV1SitesBySiteIdExperimentsResponses];
+
 export type PostV1SitesBySiteIdExperimentsData = {
     body?: {
         key: string;

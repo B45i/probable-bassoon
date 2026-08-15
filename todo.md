@@ -1,3 +1,4 @@
 - use pages for snippet
 - use generated client code on snippet
-- jwt on cookie
+- name in generated code is wrong
+- fetching all site experiments, not just count on home page load.
