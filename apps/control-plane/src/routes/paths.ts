@@ -12,6 +12,8 @@ function composePath(base: string, relative: string): string {
 }
 
 export const HEALTH_PATH = "/health";
+export const OPENAPI_PATH = "/openapi.json";
+export const DOCS_PATH = "/docs";
 
 export const AUTH_BASE = "/v1/auth";
 export const AUTH_PATHS = {

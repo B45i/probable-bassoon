@@ -1,8 +1,9 @@
+import { swaggerUI } from "@hono/swagger-ui";
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { SNIPPET_SOURCE } from "./generated/snippet-source";
 import { jsonContent } from "./lib/http";
 import { assignRoutes } from "./routes/assign";
-import { ASSIGN_BASE, HEALTH_PATH, SNIPPET_PATH } from "./routes/paths";
+import { ASSIGN_BASE, DOCS_PATH, HEALTH_PATH, OPENAPI_PATH, SNIPPET_PATH } from "./routes/paths";
 import type { AppEnv } from "./types";
 
 /**
@@ -45,9 +46,13 @@ app.get(SNIPPET_PATH, (c) =>
   }),
 );
 
-app.doc31("/openapi.json", {
+app.doc31(OPENAPI_PATH, {
   openapi: "3.1.0",
   info: { title: "AB Tester — Assignment", version: "0.0.0" },
 });
+
+// Renders the spec above as a browsable, try-it-out UI — nothing to author, it's a
+// viewer for `/openapi.json`, which already exists and is already correct.
+app.get(DOCS_PATH, swaggerUI({ url: OPENAPI_PATH }));
 
 export default app;

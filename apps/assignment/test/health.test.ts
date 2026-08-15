@@ -35,3 +35,13 @@ describe("GET /openapi.json", () => {
     expect(Object.keys(doc.paths)).toEqual(expect.arrayContaining(["/health", "/v1/assign"]));
   });
 });
+
+describe("GET /docs", () => {
+  it("serves a Swagger UI page pointed at the OpenAPI spec", async () => {
+    const res = await app.request("/docs");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/html");
+    const body = await res.text();
+    expect(body).toContain("/openapi.json");
+  });
+});

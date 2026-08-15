@@ -41,7 +41,7 @@ The two are separate `wrangler dev` processes, so by default each simulates its 
 **Testing:**
 
 - `pnpm test` runs the full automated suite (`vitest` + `@cloudflare/vitest-pool-workers`, real Workers runtime semantics — no dev server needed).
-- There's no admin UI yet, so exercising the running system by hand means calling the API directly — `curl`, or import each Worker's `GET /openapi.json` into something like Postman/Insomnia for a browsable version. Typical flow: sign up → log in → create a site → create an experiment → set it `running` → `GET /v1/assign` on the Assignment Worker with that site's key.
+- Exercise the running system by hand with `curl`, or the browsable Swagger UI at `/docs` on each Worker (`http://localhost:8787/docs` for control plane, `http://localhost:8788/docs` for assignment). Typical flow: sign up → log in → create a site → create an experiment → set it `running` → `GET /v1/assign` on the Assignment Worker with that site's key.
 
 ## Documentation
 

@@ -14,3 +14,4 @@ apps/*/openapi.json
 packages/api-client/src/generated/
 apps/assignment/src/generated/
 .wrangler-state/*
+docs/design.simple.md

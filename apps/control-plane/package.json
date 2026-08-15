@@ -15,6 +15,7 @@
   "dependencies": {
     "@ab-tester/db": "workspace:*",
     "@ab-tester/shared": "workspace:*",
+    "@hono/swagger-ui": "^0.6.1",
     "@hono/zod-openapi": "^1.6.0",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.13.2",

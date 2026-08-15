@@ -1,6 +1,8 @@
 /** Every route path in this app, in one place — same reasoning as control-plane's
  * routes/paths.ts. */
 export const HEALTH_PATH = "/health";
+export const OPENAPI_PATH = "/openapi.json";
+export const DOCS_PATH = "/docs";
 
 // Served by this Worker, not a third-party CDN or a separate static-hosting resource —
 // see docs/DESIGN.md's snippet-delivery decision for the full reasoning. Same domain

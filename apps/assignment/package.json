@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@ab-tester/shared": "workspace:*",
+    "@hono/swagger-ui": "^0.6.1",
     "@hono/zod-openapi": "^1.6.0",
     "hono": "^4.13.2",
     "zod": "^4.4.3"
