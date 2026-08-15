@@ -29,4 +29,6 @@
     "bindings": [{ "name": "EXPOSURES", "class_name": "ExperimentExposures" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ExperimentExposures"] }]
+  // JWT_SECRET (admin auth, D8) is a Worker secret, not declared here — local dev reads
+  // it from .dev.vars (see .dev.vars.example); deploy with `wrangler secret put JWT_SECRET`.
 }

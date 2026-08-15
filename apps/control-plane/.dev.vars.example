@@ -1,0 +1,3 @@
+# Copy to .dev.vars (gitignored) for local `wrangler dev` / `pnpm test`.
+# Generate a real value with: openssl rand -hex 32
+JWT_SECRET=replace-with-a-long-random-value

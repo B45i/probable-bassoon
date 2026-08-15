@@ -3,22 +3,42 @@ import { sqliteTable, text, integer, primaryKey, uniqueIndex } from "drizzle-orm
 import { uuidv7 } from "uuidv7";
 
 /**
- * D1 schema — config and conversions (docs/DESIGN.md Appendix B.1). Durable Object
- * exposure storage (B.2) is not modelled here: it's a single table with one query shape,
- * queried through the DO's own SQLite storage API directly, not Drizzle.
+ * D1 schema — config and conversions (docs/DESIGN.md Appendix B.1), plus users for admin
+ * authentication (D8) — not in the original doc's SQL, added when the admin side moved
+ * from a bare shared key to real user accounts. No sessions table: admin auth is a
+ * stateless JWT (D8) — verified by signature, no D1 or KV lookup involved. Durable
+ * Object exposure storage (B.2) is not modelled here either: it's a single table with
+ * one query shape, queried through the DO's own SQLite storage API directly, not Drizzle.
  *
- * Primary keys on sites/experiments/variants are UUIDv7 rather than the autoincrement
- * integers shown in the doc's SQL: this is a multi-tenant system (C-2), and a sequential
- * integer id leaks how many experiments/sites exist across the whole platform to anyone
- * who can see one. UUIDv7 keeps the time-ordered insert locality autoincrement gave up,
- * without the enumeration leak. Conversions keep their natural composite key as documented
- * — no surrogate id needed there.
+ * Primary keys on users/sites/experiments/variants are UUIDv7 rather than autoincrement
+ * integers: this is a multi-tenant system (C-2), and a sequential integer id leaks how
+ * many users/experiments/sites exist across the whole platform to anyone who can see one.
+ * UUIDv7 keeps the time-ordered insert locality autoincrement gave up, without the
+ * enumeration leak. Conversions keep their natural composite key as documented — no
+ * surrogate id needed there.
  */
+
+export const users = sqliteTable("users", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => uuidv7()),
+  email: text("email").notNull().unique(),
+  /** PBKDF2, never plaintext — see apps/control-plane/src/lib/auth/password.ts. */
+  passwordHash: text("password_hash").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+
+export type User = InferSelectModel<typeof users>;
+export type NewUser = InferInsertModel<typeof users>;
 
 export const sites = sqliteTable("sites", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => uuidv7()),
+  ownerUserId: text("owner_user_id")
+    .notNull()
+    .references(() => users.id),
+  /** Public, ships in the browser snippet — not a secret (D8, §3.5's "site key"). */
   apiKey: text("api_key").notNull().unique(),
   name: text("name").notNull(),
 });
@@ -96,7 +116,12 @@ export type NewConversion = InferInsertModel<typeof conversions>;
 // of their own. Conversions carry no relation: the doc's SQL declares no FK for them
 // either (visitors are never a stored entity — A-1), and attribution is cross-referenced
 // in application code, not joined (D4).
-export const sitesRelations = relations(sites, ({ many }) => ({
+export const usersRelations = relations(users, ({ many }) => ({
+  sites: many(sites),
+}));
+
+export const sitesRelations = relations(sites, ({ one, many }) => ({
+  owner: one(users, { fields: [sites.ownerUserId], references: [users.id] }),
   experiments: many(experiments),
 }));
 

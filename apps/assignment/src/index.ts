@@ -1,5 +1,4 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
-import type { Env } from "./env";
 
 /**
  * Assignment — the only Worker on the critical page-render path (docs/DESIGN.md §3.2,
@@ -7,6 +6,8 @@ import type { Env } from "./env";
  * Worker. That's enforced by this app having no bindings for them, not just by convention
  * — deployed separately (isolation of the assignment path, §3.2) from apps/control-plane
  * so a bug or bad deploy there can never affect this bundle.
+ *
+ * `Env` comes from the ambient `declare global` in ./env.d.ts — no import needed.
  *
  * GET /v1/assign lands with the bucketing algorithm (§5.1).
  */

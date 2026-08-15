@@ -3,6 +3,7 @@ node_modules/
 dist/
 .env
 .env.*
+.dev.vars
 .DS_Store
 
 # Cloudflare local dev state (D1 sqlite, KV, DO storage)
