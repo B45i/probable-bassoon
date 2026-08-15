@@ -7,7 +7,7 @@
   "observability": {
     "enabled": true
   },
-  // Read-only from this Worker's point of view (D2) — Config (apps/control-plane) is the
+  // Read-only from this Worker's point of view — Config (apps/control-plane) is the
   // only writer, via write-through after its D1 write. Same KV namespace id as
   // control-plane's EXPERIMENT_CONFIG binding; fill in once the namespace is created
   // (`wrangler kv namespace create EXPERIMENT_CONFIG`).

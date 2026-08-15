@@ -419,22 +419,25 @@ POST /v1/sites                     { name } → generates the site's public site
 GET  /v1/sites                     # sites owned by the authenticated user
 
 # Config (bearer token; site must be owned by the authenticated user)
-POST /v1/experiments               # create: variants, weights, traffic %, optional llm_brief
-POST /v1/experiments/:key/status   # running | paused (kill switch)
-POST /v1/experiments/:key/generate # async LLM copy generation (authoring aid)
+# Nested under sites, not flat — an experiment key is only unique per site
+# (Appendix B.1's UNIQUE(site_id, key)), and a user can own more than one site, so a
+# bare :key is ambiguous about which experiment it means.
+POST /v1/sites/:siteId/experiments                # create: variants, weights, traffic %
+POST /v1/sites/:siteId/experiments/:key/status     # running | paused (kill switch)
+POST /v1/sites/:siteId/experiments/:key/generate   # async LLM copy generation (authoring aid) — not yet built
 
-# Critical path (site key, CORS-scoped)
+# Critical path (site key, CORS-scoped) — not yet built
 GET  /v1/assign?visitor_id=…&experiments=key1,key2
   → 200 { "assignments": [ { "experiment": "hero_copy", "variant": "b",
            "content": { "headline": "…", "cta": "…" } } ] }
   # experiments the visitor is not part of are simply omitted — absence means "show default"
 
-# Tracking (site key, sendBeacon-compatible, always 202)
+# Tracking (site key, sendBeacon-compatible, always 202) — not yet built
 POST /v1/events/exposure    { visitor_id, experiment, variant }
 POST /v1/events/conversion  { visitor_id, goal }
 
-# Results (bearer token; site must be owned by the authenticated user)
-GET  /v1/experiments/:key/results?goal=signup
+# Results (bearer token; site must be owned by the authenticated user) — not yet built
+GET  /v1/sites/:siteId/experiments/:key/results?goal=signup
   → per variant: exposures, conversions, rate, 95% CI; lift + p-value vs control; SRM status
 ```
 
@@ -515,3 +518,9 @@ CREATE TABLE exposures (
 ### B.3 Results assembly
 
 The Results worker assembles results in application code: fetch aggregate exposure counts (and, when attribution timing is needed, the per-visitor exposure list) from the relevant experiment's Durable Object, fetch matching conversions for the goal from D1, and cross-reference by `visitor_id`. See D4 for the reasoning and the rollup-based upgrade path once this stops being fast enough at scale.
+
+### B.4 KV — experiment config
+
+The key is built `experiment:{site_key}:{experiment_key}`, from the site's *public* key, not its internal `site_id`. This isn't a style choice: Assignment only ever has the public site key from the incoming request (§3.5) and has no D1 access to translate an id into one (D2) — the key has to be constructible from what Assignment actually holds. Config is the only writer, and builds it from the site row it already fetched for the ownership check, so this costs nothing extra per write.
+
+The stored value matches `packages/shared`'s `experimentConfigSchema` — `key`, `version`, `salt`, `status`, `trafficBp`, `variants[]` — parsed through that schema before every write, not just on read, since Config is the only producer and a malformed blob is a bug worth catching at the source. Every write to an experiment (create, status change) rewrites the whole value; there's no partial update. An experiment's `status` is written through as-is, including `draft` — Assignment is the one that decides `draft`/`paused`/`archived` means "omit this experiment," not Config.

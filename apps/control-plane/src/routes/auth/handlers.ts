@@ -58,12 +58,12 @@ export async function login({ db, email, password, jwtSecret }: LoginInput): Pro
     return { status: 401, body: { error: "Invalid email or password" } };
   }
 
-  // No session row to create (D8) — the token itself is the credential from here on.
+  // No session row to create — the token itself is the credential from here on.
   const { token, expiresAt } = await signAuthToken(user, jwtSecret);
   return { status: 200, body: { token, expiresAt: expiresAt.toISOString() } };
 }
 
-/** Straight from the verified token's claims (D8) — no D1 read. Means a changed email
+/** Straight from the verified token's claims — no D1 read. Means a changed email
  * wouldn't show here until the next login/token; there's no email-change feature yet,
  * so that's not a live problem, just the honest cost of a stateless token. */
 export function me(user: AuthenticatedUser): { status: 200; body: AuthenticatedUser } {

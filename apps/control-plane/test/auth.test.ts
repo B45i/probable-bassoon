@@ -54,7 +54,7 @@ describe("POST /v1/auth/login", () => {
     const res = await login(credentials);
     expect(res.status).toBe(200);
     const body = await res.json<AuthTokenResponse>();
-    // header.payload.signature — not just "some string", now that it's a real JWT (D8).
+    // header.payload.signature — not just "some string", it's an actual JWT.
     expect(body.token.split(".")).toHaveLength(3);
   });
 

@@ -7,7 +7,7 @@
 declare global {
   namespace Cloudflare {
     interface Env {
-      /** Config, replicated globally; the only store this Worker ever touches (D1, D2). */
+      /** Config, replicated globally; the only store this Worker ever touches. */
       EXPERIMENT_CONFIG: KVNamespace;
     }
   }

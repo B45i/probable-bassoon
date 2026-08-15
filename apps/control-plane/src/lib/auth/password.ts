@@ -1,14 +1,15 @@
-import { fromHex, timingSafeEqual, toHex } from "./encoding";
+import { fromHex, timingSafeEqual, toHex } from "../encoding";
 
 /**
- * Password hashing — deliberately slow (D8): passwords are user-chosen and low-entropy,
- * so resistance to offline brute force matters. PBKDF2 via Web Crypto's `crypto.subtle`
+ * Password hashing — deliberately slow: passwords are user-chosen and low-entropy, so
+ * resistance to offline brute force matters. PBKDF2 via Web Crypto's `crypto.subtle`
  * because it's natively supported in the Workers runtime; bcrypt/scrypt/Argon2 aren't,
  * and would need a WASM or pure-JS shim for no real benefit at this scale.
  *
  * This is the one place slow hashing belongs in this codebase — everything else
- * auth-related (the JWT in jwt.ts, the site key in routes/sites.ts) is a high-entropy
- * value generated server-side, not a user secret, so it doesn't need this treatment.
+ * auth-related (the JWT in jwt.ts, the site key in routes/sites/handlers.ts) is a
+ * high-entropy value generated server-side, not a user secret, so it doesn't need this
+ * treatment.
  */
 
 const ITERATIONS = 600_000; // OWASP 2023 minimum for PBKDF2-HMAC-SHA256

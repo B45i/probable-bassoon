@@ -13,13 +13,13 @@ import type { ExperimentExposures } from "./durable-objects/experiment-exposures
 declare global {
   namespace Cloudflare {
     interface Env {
-      /** Written through here after every D1 write; Assignment reads it, this Worker doesn't (D2). */
+      /** Written through here after every D1 write; Assignment reads it, this Worker doesn't. */
       EXPERIMENT_CONFIG: KVNamespace;
-      /** Experiment/variant config and conversions (D6, Appendix B.1). */
+      /** Experiment/variant config and conversions. */
       DB: D1Database;
-      /** One object per experiment, addressed by (site_id, experiment_id) (D3, Appendix B.2). */
+      /** One object per experiment, addressed by (site_id, experiment_id). */
       EXPOSURES: DurableObjectNamespace<ExperimentExposures>;
-      /** Worker secret, not declared in wrangler.jsonc — signs/verifies admin JWTs (D8).
+      /** Worker secret, not declared in wrangler.jsonc — signs/verifies admin JWTs.
        * Local dev: apps/control-plane/.dev.vars (see .dev.vars.example). Deploy:
        * `wrangler secret put JWT_SECRET`. */
       JWT_SECRET: string;

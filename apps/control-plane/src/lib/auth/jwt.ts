@@ -1,13 +1,17 @@
 import { sign, verify } from "hono/jwt";
 
 /**
- * Admin auth is a stateless JWT (D8): the token is self-describing (user id, email,
- * account creation date, expiry), verified by signature alone. No sessions table, no D1
- * or KV lookup on the request path — see docs/DESIGN.md D8 for why, and what that costs
- * (no server-side logout).
+ * Admin auth is a stateless JWT: the token is self-describing (user id, email, account
+ * creation date, expiry), verified by signature alone. No sessions table, no D1 or KV
+ * lookup on the request path — deliberately, since nothing in this system needs to
+ * revoke a token before it expires; the cost of that choice is that there's no
+ * server-side logout (a client can forget its own token, but a copied one stays valid
+ * until it expires).
  */
 
-export const JWT_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days — see docs/DESIGN.md D8
+// Long enough that an admin isn't constantly re-logging in, short enough to bound how
+// long a leaked token stays valid given there's no way to revoke one early.
+export const JWT_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
 
 export interface AuthTokenPayload {
   [key: string]: unknown; // required to structurally satisfy hono/jwt's JWTPayload

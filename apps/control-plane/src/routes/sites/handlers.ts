@@ -1,6 +1,6 @@
 import { sites, type Database, type NewSite } from "@ab-tester/db";
 import { eq } from "drizzle-orm";
-import { toHex } from "../../lib/auth/encoding";
+import { toHex } from "../../lib/encoding";
 import { toSiteResponse } from "./mappers";
 import type { SiteResponse } from "./schemas";
 
@@ -11,9 +11,9 @@ interface CreateSiteInput {
 }
 
 export async function createSite({ db, ownerUserId, name }: CreateSiteInput): Promise<{ status: 201; body: SiteResponse }> {
-  // Public, ships in the browser snippet (docs/DESIGN.md §3.5) — not a secret, so no
-  // hashing here, unlike passwords/the JWT secret. Prefixed the way Stripe-style keys
-  // are, so it's recognizable in logs/devtools as what it is.
+  // Public, ships in the browser snippet embedded in the customer's page — not a secret,
+  // so no hashing here, unlike passwords/the JWT secret. Prefixed the way Stripe-style
+  // keys are, so it's recognizable in logs/devtools as what it is.
   const newSite: NewSite = {
     ownerUserId,
     name,

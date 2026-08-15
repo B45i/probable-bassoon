@@ -1,7 +1,8 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { jsonContent } from "./lib/http";
-import { AUTH_BASE, HEALTH_PATH, SITES_BASE } from "./routes/paths";
+import { AUTH_BASE, EXPERIMENT_BASE, EXPERIMENTS_BASE, HEALTH_PATH, SITES_BASE } from "./routes/paths";
 import authRoutes from "./routes/auth";
+import { byKeyRoutes as experimentByKeyRoutes, collectionRoutes as experimentCollectionRoutes } from "./routes/experiments";
 import siteRoutes from "./routes/sites";
 import type { AppEnv } from "./types";
 
@@ -12,10 +13,9 @@ import type { AppEnv } from "./types";
 // under plain Node via tsx, and the DO's `cloudflare:workers` import only resolves
 // inside the actual Workers runtime.
 //
-// Routers for tracking (POST /v1/events/*) and config/results for experiments
-// (POST /v1/experiments/*, GET /v1/experiments/:key/results) land with their respective
-// implementations — see docs/DESIGN.md Appendix A for the full contract. Auth
-// (/v1/auth/*) and site provisioning (/v1/sites) are D8.
+// Tracking (POST /v1/events/*) and results (GET /v1/experiments/:key/results) land with
+// their respective implementations. Auth (/v1/auth/*), site provisioning (/v1/sites),
+// and experiment config (/v1/sites/:siteId/experiments) are already wired below.
 const app = new OpenAPIHono<AppEnv>();
 
 app.openAPIRegistry.registerComponent("securitySchemes", "bearerAuth", {
@@ -35,6 +35,8 @@ app.openapi(healthRoute, (c) => c.json({ ok: true as const }));
 
 app.route(AUTH_BASE, authRoutes);
 app.route(SITES_BASE, siteRoutes);
+app.route(EXPERIMENTS_BASE, experimentCollectionRoutes);
+app.route(EXPERIMENT_BASE, experimentByKeyRoutes);
 
 app.doc31("/openapi.json", {
   openapi: "3.1.0",

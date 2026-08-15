@@ -1,5 +1,8 @@
-// Used by password.ts (PBKDF2 salt/hash encoding) and routes/sites.ts (the site key) —
-// nothing here is auth-specific, it's just the bytes<->hex plumbing Web Crypto needs.
+// Used by lib/auth/password.ts (PBKDF2 salt/hash encoding), routes/sites (the site key),
+// and routes/experiments (the per-version salt) — nothing here is auth-specific, it's
+// just the bytes<->hex plumbing Web Crypto needs, which is why it lives at lib/ root
+// rather than under lib/auth/ (it moved from there once a second, non-auth consumer
+// showed up).
 
 export function toHex(bytes: Uint8Array): string {
   return Array.from(bytes)

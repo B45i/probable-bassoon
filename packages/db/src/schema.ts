@@ -3,19 +3,18 @@ import { sqliteTable, text, integer, primaryKey, uniqueIndex } from "drizzle-orm
 import { uuidv7 } from "uuidv7";
 
 /**
- * D1 schema — config and conversions (docs/DESIGN.md Appendix B.1), plus users for admin
- * authentication (D8) — not in the original doc's SQL, added when the admin side moved
- * from a bare shared key to real user accounts. No sessions table: admin auth is a
- * stateless JWT (D8) — verified by signature, no D1 or KV lookup involved. Durable
- * Object exposure storage (B.2) is not modelled here either: it's a single table with
- * one query shape, queried through the DO's own SQLite storage API directly, not Drizzle.
+ * D1 schema — config, conversions, and users for admin authentication. Admin auth is a
+ * stateless JWT verified by signature, so there's no sessions table: nothing about a
+ * login is persisted after it's issued. Durable Object exposure storage isn't modelled
+ * here either — it's a single table with one query shape, queried through the DO's own
+ * SQLite storage API directly, not Drizzle.
  *
  * Primary keys on users/sites/experiments/variants are UUIDv7 rather than autoincrement
- * integers: this is a multi-tenant system (C-2), and a sequential integer id leaks how
- * many users/experiments/sites exist across the whole platform to anyone who can see one.
- * UUIDv7 keeps the time-ordered insert locality autoincrement gave up, without the
- * enumeration leak. Conversions keep their natural composite key as documented — no
- * surrogate id needed there.
+ * integers: this is a multi-tenant system (many independent customer sites share one
+ * deployment), and a sequential integer id leaks how many users/experiments/sites exist
+ * across the whole platform to anyone who can see one. UUIDv7 keeps the time-ordered
+ * insert locality autoincrement gave up, without the enumeration leak. Conversions keep
+ * their natural composite key — no surrogate id needed there.
  */
 
 export const users = sqliteTable("users", {
@@ -38,7 +37,7 @@ export const sites = sqliteTable("sites", {
   ownerUserId: text("owner_user_id")
     .notNull()
     .references(() => users.id),
-  /** Public, ships in the browser snippet — not a secret (D8, §3.5's "site key"). */
+  /** Public, ships in the browser snippet embedded in the customer's page — not a secret. */
   apiKey: text("api_key").notNull().unique(),
   name: text("name").notNull(),
 });
@@ -56,13 +55,16 @@ export const experiments = sqliteTable(
       .notNull()
       .references(() => sites.id),
     key: text("key").notNull(),
-    /** Bumped, with a new salt, on any weight change while running (§5.3). */
+    /** Bumped, with a new salt, whenever variant weights change while running — changing
+     * a live split's boundaries in place would silently reassign visitors who were
+     * already bucketed, so it's treated as a new version instead. */
     version: integer("version").notNull().default(1),
     salt: text("salt").notNull(),
     status: text("status", { enum: ["draft", "running", "paused", "archived"] })
       .notNull()
       .default("draft"),
-    /** Basis points, 10000 = 100%. May only increase while running (§5.3). */
+    /** Basis points, 10000 = 100%. May only increase once running — narrowing it would
+     * drop visitors who were already included. */
     trafficBp: integer("traffic_bp").notNull().default(10000),
     createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   },
@@ -85,7 +87,8 @@ export const variants = sqliteTable(
     /** Basis points; fixed while running and sums to 10000 across an experiment's variants. */
     weightBp: integer("weight_bp").notNull(),
     isControl: integer("is_control", { mode: "boolean" }).notNull().default(false),
-    /** JSON, serialized; also written through to KV (D2). */
+    /** JSON, serialized; also written through to KV alongside the rest of the
+     * experiment's config. */
     content: text("content", { mode: "json" }).notNull().default("{}"),
   },
   (table) => [uniqueIndex("variants_experiment_id_key_unique").on(table.experimentId, table.key)],
@@ -94,8 +97,10 @@ export const variants = sqliteTable(
 export type Variant = InferSelectModel<typeof variants>;
 export type NewVariant = InferInsertModel<typeof variants>;
 
-// Conversions stay centralized here (D4): lower volume than exposures, no natural single
-// shard to route to, dedupe still needs just one constraint.
+// Conversions stay centralized here, not sharded like exposures: lower volume than
+// exposures, and no natural single shard to route to — a visitor may have been exposed
+// to several experiments before converting, so a conversion doesn't know in advance
+// which one to credit. Dedupe still needs just one constraint (the primary key below).
 export const conversions = sqliteTable(
   "conversions",
   {
@@ -113,9 +118,11 @@ export type NewConversion = InferInsertModel<typeof conversions>;
 
 // Relations mirror the FKs above — they enable relational queries (e.g.
 // `db.query.experiments.findMany({ with: { variants: true } })`) but add no constraints
-// of their own. Conversions carry no relation: the doc's SQL declares no FK for them
-// either (visitors are never a stored entity — A-1), and attribution is cross-referenced
-// in application code, not joined (D4).
+// of their own. Conversions carry no relation: visitor identity is never stored
+// server-side (just a client-side cookie), so there's no `visitors` table to reference,
+// and what conversions need cross-referencing against — exposures — lives in a Durable
+// Object, not a D1 table, so it's outside what Drizzle relations can express anyway.
+// That cross-referencing happens in application code, not a join.
 export const usersRelations = relations(users, ({ many }) => ({
   sites: many(sites),
 }));

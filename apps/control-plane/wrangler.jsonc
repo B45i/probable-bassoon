@@ -7,11 +7,11 @@
   "observability": {
     "enabled": true
   },
-  // Written through to KV after every D1 write (D2); same namespace id as
+  // Written through to KV after every D1 write; same namespace id as
   // apps/assignment's EXPERIMENT_CONFIG binding. Fill in once created
   // (`wrangler kv namespace create EXPERIMENT_CONFIG`).
   "kv_namespaces": [{ "binding": "EXPERIMENT_CONFIG", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }],
-  // Experiment/variant config and conversions (D6, Appendix B.1). Fill in once created
+  // Experiment/variant config and conversions. Fill in once created
   // (`wrangler d1 create ab-tester`); migrations live in packages/db/migrations and are
   // applied with `wrangler d1 migrations apply`, not drizzle-kit.
   "d1_databases": [
@@ -22,13 +22,12 @@
       "migrations_dir": "../../packages/db/migrations"
     }
   ],
-  // One instance per experiment (D3, Appendix B.2). `new_sqlite_classes` (not
-  // `new_classes`) because it uses the SQLite-backed Durable Object storage the schema
-  // in Appendix B.2 assumes.
+  // One instance per experiment. `new_sqlite_classes` (not `new_classes`) because it
+  // uses Durable Objects' SQLite-backed storage, not the older key-value storage API.
   "durable_objects": {
     "bindings": [{ "name": "EXPOSURES", "class_name": "ExperimentExposures" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ExperimentExposures"] }]
-  // JWT_SECRET (admin auth, D8) is a Worker secret, not declared here — local dev reads
-  // it from .dev.vars (see .dev.vars.example); deploy with `wrangler secret put JWT_SECRET`.
+  // JWT_SECRET (admin auth) is a Worker secret, not declared here — local dev reads it
+  // from .dev.vars (see .dev.vars.example); deploy with `wrangler secret put JWT_SECRET`.
 }

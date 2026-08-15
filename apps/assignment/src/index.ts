@@ -1,15 +1,16 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 
 /**
- * Assignment — the only Worker on the critical page-render path (docs/DESIGN.md §3.2,
- * §3.5). It reads KV and nothing else: no D1, no Durable Objects, no calls to the other
- * Worker. That's enforced by this app having no bindings for them, not just by convention
- * — deployed separately (isolation of the assignment path, §3.2) from apps/control-plane
- * so a bug or bad deploy there can never affect this bundle.
+ * Assignment — the only Worker on the critical page-render path: every visitor hits this
+ * on every page load, with a hard latency budget. It reads KV and nothing else — no D1,
+ * no Durable Objects, no calls to the other Worker. That's enforced by this app having no
+ * bindings for them, not just by convention — deployed as its own Worker, separate from
+ * apps/control-plane, so a bug or bad deploy in the low-stakes admin/tracking surface can
+ * never affect this bundle or add latency to it.
  *
  * `Env` comes from the ambient `declare global` in ./env.d.ts — no import needed.
  *
- * GET /v1/assign lands with the bucketing algorithm (§5.1).
+ * GET /v1/assign lands with the bucketing algorithm.
  */
 const app = new OpenAPIHono<{ Bindings: Env }>();
 
