@@ -338,15 +338,15 @@ During an outage, events are lost rather than queued in the browser. Loss affect
 - **Exposure is counted when the variant actually renders**, not when it is assigned.
 - **Conversion rate is unique converted visitors divided by unique exposed visitors.** The Durable Object's uniqueness constraint (D3) and D1's uniqueness constraint (D4) together make it impossible for duplicates to inflate either figure.
 - **First exposure wins.**
-- **Attribution.** A conversion counts toward an experiment only if it occurred after the exposure — computed in the Results worker (D4).
+- **Attribution.** A conversion counts toward an experiment only if it occurred after the exposure — computed in the Results worker (D4). Compared at millisecond precision, not second precision: an exposure and its resulting conversion can land in the same second (a fast click-through), and rounding either timestamp down to the second risks making a real conversion look like it happened before the exposure it followed.
 
 ### 8.2 Reported metrics
 
-Per variant: exposures, conversions, conversion rate, and a 95% Wilson confidence interval. For each variant against control: a two-proportion z-test reporting p-value and lift. An experiment is marked significant only when p < 0.05 **and** a minimum sample size has been reached.
+Per variant: exposures, conversions, conversion rate, and a 95% Wilson confidence interval. For each variant against control: a two-proportion z-test reporting p-value and lift (control itself reports neither — there's nothing to compare it against). An experiment is marked significant only when p < 0.05 **and** both the control and the variant being compared have at least 100 exposures — an arbitrary but explicit floor, not derived from a power calculation for any specific experiment (nothing here asks an author for an expected effect size or baseline rate up front, so there's no input to run one against). It exists to stop a handful of early conversions from reading as "significant" before the sample is large enough for the p-value to mean much; 100 is a common rule-of-thumb minimum, not a guarantee of adequate power for every experiment.
 
 ### 8.3 SRM check (primary guardrail)
 
-A chi-squared test compares actual exposure counts, aggregated from the experiment's Durable Object, against the configured split. A mismatch means something is wrong — a bucketing defect, a faulty integration, or bot traffic — regardless of what the significance test says.
+A chi-squared test compares actual exposure counts, aggregated from the experiment's Durable Object, against the configured split. A mismatch means something is wrong — a bucketing defect, a faulty integration, or bot traffic — regardless of what the significance test says. Flagged at p < 0.005, a stricter bar than the 0.05 used for the significance test: this check runs automatically on every results request rather than once as a deliberate hypothesis test, so it needs a higher bar before crying wolf on ordinary sampling noise. 0.005 is the strictest level available from a standard, citable chi-squared table; tighter thresholds are common in high-traffic industry practice but aren't used here without a table to check them against.
 
 ### 8.4 Known limitation: peeking
 
@@ -447,9 +447,11 @@ GET  /v1/assign?site_key=…&visitor_id=…&experiments=key1,key2
 POST /v1/events/exposure?site_key=…    { visitor_id, experiment, variant }
 POST /v1/events/conversion?site_key=…  { visitor_id, goal }
 
-# Results (bearer token; site must be owned by the authenticated user) — not yet built
+# Results (bearer token; site must be owned by the authenticated user)
 GET  /v1/sites/:siteId/experiments/:key/results?goal=signup
-  → per variant: exposures, conversions, rate, 95% CI; lift + p-value vs control; SRM status
+  → per variant: exposures, conversions, rate, 95% CI; lift + p-value vs control (null
+    for control itself); plus a top-level SRM check (chi-squared, degrees of freedom,
+    whether it was detected)
 ```
 
 ## Appendix B — Data model

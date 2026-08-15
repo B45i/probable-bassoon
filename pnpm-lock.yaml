@@ -134,6 +134,9 @@ importers:
       murmurhash3js:
         specifier: ^3.0.1
         version: 3.0.1
+      simple-statistics:
+        specifier: ^7.10.1
+        version: 7.10.1
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -2147,6 +2150,9 @@ packages:
   siginfo@2.0.0:
     resolution: {integrity: sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==}
 
+  simple-statistics@7.10.1:
+    resolution: {integrity: sha512-Ao1uRUD8K18irQdAymQH8fDa3Tw8EfdxdNKOM2khG3AU5xnKZMS5WzgDmXze0bUAoNmsjsyknPHxyaq9UKMRzQ==}
+
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
@@ -3837,6 +3843,8 @@ snapshots:
   shebang-regex@3.0.0: {}
 
   siginfo@2.0.0: {}
+
+  simple-statistics@7.10.1: {}
 
   source-map-js@1.2.1: {}
 

@@ -3,6 +3,7 @@ import { jsonContent } from "./lib/http";
 import { AUTH_BASE, EVENTS_BASE, EXPERIMENT_BASE, EXPERIMENTS_BASE, HEALTH_PATH, SITES_BASE } from "./routes/paths";
 import authRoutes from "./routes/auth";
 import { byKeyRoutes as experimentByKeyRoutes, collectionRoutes as experimentCollectionRoutes } from "./routes/experiments";
+import { resultsRoutes } from "./routes/results";
 import siteRoutes from "./routes/sites";
 import { trackingRoutes } from "./routes/tracking";
 import type { AppEnv } from "./types";
@@ -13,10 +14,6 @@ import type { AppEnv } from "./types";
 // ExperimentExposures Durable Object): scripts/generate-openapi.ts imports this file
 // under plain Node via tsx, and the DO's `cloudflare:workers` import only resolves
 // inside the actual Workers runtime.
-//
-// Results (GET /v1/sites/:siteId/experiments/:key/results) lands with its own
-// implementation. Everything else — auth, sites, experiment config, and tracking — is
-// wired below.
 const app = new OpenAPIHono<AppEnv>();
 
 app.openAPIRegistry.registerComponent("securitySchemes", "bearerAuth", {
@@ -38,6 +35,7 @@ app.route(AUTH_BASE, authRoutes);
 app.route(SITES_BASE, siteRoutes);
 app.route(EXPERIMENTS_BASE, experimentCollectionRoutes);
 app.route(EXPERIMENT_BASE, experimentByKeyRoutes);
+app.route(EXPERIMENT_BASE, resultsRoutes);
 app.route(EVENTS_BASE, trackingRoutes);
 
 app.doc31("/openapi.json", {

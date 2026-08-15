@@ -4,14 +4,11 @@ import { and, eq } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 import { toHex } from "../../lib/encoding";
 import type { ErrorBody } from "../../lib/http";
+import { isOwnedBy, SITE_NOT_FOUND } from "../../lib/ownership";
 import { toExperimentConfig, toExperimentResponse } from "./mappers";
 import type { CreateExperimentBody, ExperimentResponse, SetStatusBody } from "./schemas";
 
 const SALT_BYTES = 16;
-
-/** 404, not 403, for a site the caller doesn't own — matching routes/sites: doesn't
- * confirm whether a site id that isn't theirs even exists. */
-const SITE_NOT_FOUND: { status: 404; body: ErrorBody } = { status: 404, body: { error: "Site not found" } };
 
 interface CreateExperimentInput extends CreateExperimentBody {
   db: Database;
@@ -37,7 +34,7 @@ export async function createExperiment(input: CreateExperimentInput): Promise<Cr
       .limit(1),
   ]);
 
-  if (!site || site.ownerUserId !== ownerUserId) {
+  if (!isOwnedBy(site, ownerUserId)) {
     return SITE_NOT_FOUND;
   }
   if (existing) {
@@ -103,7 +100,7 @@ export async function setExperimentStatus(input: SetExperimentStatusInput): Prom
     }),
   ]);
 
-  if (!site || site.ownerUserId !== ownerUserId) {
+  if (!isOwnedBy(site, ownerUserId)) {
     return SITE_NOT_FOUND;
   }
   if (!experiment) {

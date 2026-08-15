@@ -114,7 +114,12 @@ export const conversions = sqliteTable(
     siteKey: text("site_key").notNull(),
     visitorId: text("visitor_id").notNull(),
     goalKey: text("goal_key").notNull(),
-    firstTs: integer("first_ts", { mode: "timestamp" }).notNull(),
+    // `timestamp_ms`, not `timestamp`: Drizzle's plain `timestamp` mode stores whole
+    // seconds, and this value gets compared against a Durable Object exposure's raw
+    // `Date.now()` (millisecond-precision) to decide attribution order — truncating to
+    // the second could round a conversion's stored time to earlier than the exposure it
+    // actually followed, wrongly excluding it whenever the two land in the same second.
+    firstTs: integer("first_ts", { mode: "timestamp_ms" }).notNull(),
   },
   // First conversion per goal wins.
   (table) => [primaryKey({ columns: [table.siteKey, table.visitorId, table.goalKey] })],
