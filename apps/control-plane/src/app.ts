@@ -1,6 +1,9 @@
 import { swaggerUI } from "@hono/swagger-ui";
-import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
+import { cors } from "hono/cors";
 import { jsonContent } from "./lib/http";
+import authRoutes from "./routes/auth";
+import { byKeyRoutes as experimentByKeyRoutes, collectionRoutes as experimentCollectionRoutes } from "./routes/experiments";
 import {
   AUTH_BASE,
   DOCS_PATH,
@@ -11,8 +14,6 @@ import {
   OPENAPI_PATH,
   SITES_BASE,
 } from "./routes/paths";
-import authRoutes from "./routes/auth";
-import { byKeyRoutes as experimentByKeyRoutes, collectionRoutes as experimentCollectionRoutes } from "./routes/experiments";
 import { resultsRoutes } from "./routes/results";
 import siteRoutes from "./routes/sites";
 import { trackingRoutes } from "./routes/tracking";
@@ -30,6 +31,9 @@ app.openAPIRegistry.registerComponent("securitySchemes", "bearerAuth", {
   type: "http",
   scheme: "bearer",
 });
+
+
+app.use("*", cors({ origin: "*" }));
 
 const healthRoute = createRoute({
   method: "get",
