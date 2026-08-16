@@ -22,7 +22,8 @@ interface GetResultsInput {
   siteId: string;
   ownerUserId: string;
   key: string;
-  goal: string;
+  /** When omitted, every conversion recorded for the site counts — see schemas.ts. */
+  goal?: string;
 }
 
 type GetResultsResult = { status: 200; body: ResultsResponse } | { status: 404; body: ErrorBody };
@@ -59,7 +60,7 @@ export async function getResults(input: GetResultsInput): Promise<GetResultsResu
     db
       .select()
       .from(conversions)
-      .where(and(eq(conversions.siteKey, site.apiKey), eq(conversions.goalKey, goal))),
+      .where(goal ? and(eq(conversions.siteKey, site.apiKey), eq(conversions.goalKey, goal)) : eq(conversions.siteKey, site.apiKey)),
   ]);
 
   // Attribution (D4): a conversion only counts toward an experiment if it happened after
@@ -135,5 +136,5 @@ export async function getResults(input: GetResultsInput): Promise<GetResultsResu
     experiment.variants.map((variant) => variant.weightBp / 10000),
   );
 
-  return { status: 200, body: { goal, variants: variantResults, srm } };
+  return { status: 200, body: { goal: goal ?? null, variants: variantResults, srm } };
 }

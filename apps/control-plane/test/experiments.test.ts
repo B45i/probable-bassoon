@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { experimentConfigKey, type ExperimentConfig } from "@ab-tester/shared";
 import { describe, expect, it } from "vitest";
 import app from "../src/app";
-import { experimentsRoute, experimentStatusRoute } from "../src/routes/paths";
+import { experimentRoute, experimentsRoute, experimentStatusRoute } from "../src/routes/paths";
 import type { ExperimentResponse } from "../src/routes/experiments/schemas";
 import { createSite, jsonHeaders, signupAndLogin } from "./helpers";
 
@@ -107,6 +107,80 @@ describe("POST /v1/sites/:siteId/experiments", () => {
 
     expect((await create()).status).toBe(201);
     expect((await create()).status).toBe(409);
+  });
+
+  it("rejects a key that isn't a lowercase-hyphenated slug", async () => {
+    const auth = await signupAndLogin();
+    const site = await createSite(auth);
+    const res = await app.request(
+      experimentsRoute(site.id),
+      { method: "POST", headers: { ...jsonHeaders, ...auth }, body: JSON.stringify(validBody("Not A Slug")) },
+      env,
+    );
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("GET /v1/sites/:siteId/experiments/:key", () => {
+  it("requires a bearer token", async () => {
+    const auth = await signupAndLogin();
+    const site = await createSite(auth);
+    await app.request(
+      experimentsRoute(site.id),
+      { method: "POST", headers: { ...jsonHeaders, ...auth }, body: JSON.stringify(validBody()) },
+      env,
+    );
+
+    const res = await app.request(experimentRoute(site.id, "hero_copy"), { headers: jsonHeaders }, env);
+    expect(res.status).toBe(401);
+  });
+
+  it("404s for a site the caller doesn't own", async () => {
+    const owner = await signupAndLogin();
+    const attacker = await signupAndLogin();
+    const site = await createSite(owner);
+    await app.request(
+      experimentsRoute(site.id),
+      { method: "POST", headers: { ...jsonHeaders, ...owner }, body: JSON.stringify(validBody()) },
+      env,
+    );
+
+    const res = await app.request(
+      experimentRoute(site.id, "hero_copy"),
+      { headers: { ...jsonHeaders, ...attacker } },
+      env,
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("404s for an experiment that doesn't exist", async () => {
+    const auth = await signupAndLogin();
+    const site = await createSite(auth);
+
+    const res = await app.request(
+      experimentRoute(site.id, "nonexistent"),
+      { headers: { ...jsonHeaders, ...auth } },
+      env,
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("returns the experiment", async () => {
+    const auth = await signupAndLogin();
+    const site = await createSite(auth);
+    await app.request(
+      experimentsRoute(site.id),
+      { method: "POST", headers: { ...jsonHeaders, ...auth }, body: JSON.stringify(validBody()) },
+      env,
+    );
+
+    const res = await app.request(
+      experimentRoute(site.id, "hero_copy"),
+      { headers: { ...jsonHeaders, ...auth } },
+      env,
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json<ExperimentResponse>()).toMatchObject({ key: "hero_copy", status: "draft" });
   });
 });
 

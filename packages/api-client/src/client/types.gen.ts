@@ -397,8 +397,8 @@ export type GetV1SitesBySiteIdExperimentsByKeyResultsData = {
         siteId: string;
         key: string;
     };
-    query: {
-        goal: string;
+    query?: {
+        goal?: string;
     };
     url: '/v1/sites/{siteId}/experiments/{key}/results';
 };
@@ -419,7 +419,7 @@ export type GetV1SitesBySiteIdExperimentsByKeyResultsResponses = {
      * Per-variant results for the given goal
      */
     200: {
-        goal: string;
+        goal: string | null;
         variants: Array<{
             key: string;
             isControl: boolean;
@@ -443,35 +443,6 @@ export type GetV1SitesBySiteIdExperimentsByKeyResultsResponses = {
 };
 
 export type GetV1SitesBySiteIdExperimentsByKeyResultsResponse = GetV1SitesBySiteIdExperimentsByKeyResultsResponses[keyof GetV1SitesBySiteIdExperimentsByKeyResultsResponses];
-
-export type GetV1SitesBySiteIdGoalsData = {
-    body?: never;
-    path: {
-        siteId: string;
-    };
-    query?: never;
-    url: '/v1/sites/{siteId}/goals';
-};
-
-export type GetV1SitesBySiteIdGoalsErrors = {
-    /**
-     * Site not found
-     */
-    404: {
-        error: string;
-    };
-};
-
-export type GetV1SitesBySiteIdGoalsError = GetV1SitesBySiteIdGoalsErrors[keyof GetV1SitesBySiteIdGoalsErrors];
-
-export type GetV1SitesBySiteIdGoalsResponses = {
-    /**
-     * Goal keys recorded for this site
-     */
-    200: Array<string>;
-};
-
-export type GetV1SitesBySiteIdGoalsResponse = GetV1SitesBySiteIdGoalsResponses[keyof GetV1SitesBySiteIdGoalsResponses];
 
 export type PostV1EventsExposureData = {
     body?: {

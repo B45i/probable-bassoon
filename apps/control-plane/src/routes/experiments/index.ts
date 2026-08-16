@@ -73,6 +73,24 @@ export const byKeyRoutes = new OpenAPIHono<AppEnv>();
 byKeyRoutes.use("*", attachDb);
 byKeyRoutes.use("*", attachKv);
 
+const getExperimentRoute = createRoute({
+  method: "get",
+  path: EXPERIMENT_PATHS.root,
+  security: BEARER_AUTH,
+  middleware: [requireAuth] as const,
+  request: { params: siteIdParam.extend({ key: z.string() }) },
+  responses: {
+    200: { description: "The experiment", content: jsonContent(experimentResponseSchema) },
+    404: errorResponseSpec("Site or experiment not found"),
+  },
+});
+
+byKeyRoutes.openapi(getExperimentRoute, async (c) => {
+  const { siteId, key } = c.req.valid("param");
+  const result = await handlers.getExperiment({ db: c.get("db"), siteId, key, ownerUserId: c.get("user").id });
+  return result.status === 200 ? c.json(result.body, 200) : c.json(result.body, 404);
+});
+
 const setStatusRoute = createRoute({
   method: "post",
   path: EXPERIMENT_PATHS.status,

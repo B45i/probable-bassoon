@@ -8,9 +8,25 @@ const variantInputSchema = z.object({
   content: z.record(z.string(), z.unknown()),
 });
 
+// Lowercase letters, numbers, hyphens, and underscores only — this isn't just a display
+// label, it's embedded directly into a live `<script data-experiments="...">` attribute
+// on a customer's own site and sent as a query string on every `/v1/assign` call, so it
+// needs to actually behave like an identifier. Both separators are allowed, not just
+// one — this codebase's own examples throughout docs/DESIGN.md and the test suite use
+// snake_case ("hero_copy"), so a hyphen-only pattern would reject the project's own
+// established convention, not just enforce a new one. The UI enforces the same pattern
+// before ever submitting, but this is the layer that actually has to hold — anything
+// that can call this endpoint directly (curl, a future integration) bypasses
+// client-side validation entirely.
+const EXPERIMENT_KEY_PATTERN = /^[a-z0-9]+([_-][a-z0-9]+)*$/;
+
 export const createExperimentBodySchema = z
   .object({
-    key: z.string().min(1).max(100),
+    key: z
+      .string()
+      .min(1)
+      .max(100)
+      .regex(EXPERIMENT_KEY_PATTERN, "Lowercase letters, numbers, hyphens, and underscores only"),
     /** Basis points, 10000 = 100%. Once an experiment is running, this may only
      * increase, never decrease — moving a live split's boundaries reassigns visitors
      * who were already bucketed. Not enforced here, that invariant belongs to the

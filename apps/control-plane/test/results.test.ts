@@ -80,13 +80,21 @@ describe("GET /v1/sites/:siteId/experiments/:key/results", () => {
     expect(res.status).toBe(404);
   });
 
-  it("400s when the goal query param is missing", async () => {
+  it("counts conversions across every goal when the goal query param is omitted", async () => {
     const auth = await signupAndLogin();
     const site = await createSite(auth);
     await createRunningExperiment(auth, site.id, "goal_check");
 
+    await exposeVisitor(site.apiKey, "goal_check", "control", "v1");
+    await exposeVisitor(site.apiKey, "goal_check", "control", "v2");
+    await convertVisitor(site.apiKey, "v1", "signup");
+    await convertVisitor(site.apiKey, "v2", "newsletter");
+
     const res = await app.request(experimentResultsRoute(site.id, "goal_check"), { headers: { ...auth } }, env);
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(200);
+    const body = await res.json<ResultsResponse>();
+    expect(body.goal).toBeNull();
+    expect(body.variants.find((v) => v.key === "control")).toMatchObject({ conversions: 2 });
   });
 
   it("aggregates exposures and conversions per variant, and leaves control's lift/pValue null", async () => {

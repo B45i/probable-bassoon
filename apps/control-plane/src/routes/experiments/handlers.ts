@@ -1,4 +1,13 @@
-import { experiments, sites, variants, type Database, type NewExperiment, type NewVariant } from "@ab-tester/db";
+import {
+  experiments,
+  sites,
+  variants,
+  type Database,
+  type Experiment,
+  type NewExperiment,
+  type NewVariant,
+  type Variant,
+} from "@ab-tester/db";
 import { experimentConfigKey, experimentConfigSchema } from "@ab-tester/shared";
 import { and, desc, eq } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
@@ -66,10 +75,23 @@ export async function createExperiment(input: CreateExperimentInput): Promise<Cr
     content: v.content,
   }));
 
-  const [[createdExperiment], createdVariants] = await db.batch([
-    db.insert(experiments).values(newExperiment).returning(),
-    db.insert(variants).values(newVariants).returning(),
-  ]);
+  let createdExperiment: Experiment | undefined;
+  let createdVariants: Variant[];
+  try {
+    [[createdExperiment], createdVariants] = await db.batch([
+      db.insert(experiments).values(newExperiment).returning(),
+      db.insert(variants).values(newVariants).returning(),
+    ]);
+  } catch (error) {
+    // The check above and this insert aren't atomic — two requests for the same key can
+    // both pass it before either commits. UNIQUE(site_id, key) is the real guarantee;
+    // this just turns its violation into the same clean 409 everyone else gets from the
+    // check, instead of an uncaught 500 for whichever request loses the race.
+    if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {
+      return { status: 409, body: { error: "Experiment key already exists for this site" } };
+    }
+    throw error;
+  }
   if (!createdExperiment) {
     throw new Error("Experiment insert returned no row");
   }
@@ -77,6 +99,41 @@ export async function createExperiment(input: CreateExperimentInput): Promise<Cr
   await writeThroughKv(kv, site.apiKey, createdExperiment, createdVariants);
 
   return { status: 201, body: toExperimentResponse(createdExperiment, createdVariants) };
+}
+
+interface GetExperimentInput {
+  db: Database;
+  siteId: string;
+  ownerUserId: string;
+  key: string;
+}
+
+type GetExperimentResult = { status: 200; body: ExperimentResponse } | { status: 404; body: ErrorBody };
+
+export async function getExperiment(input: GetExperimentInput): Promise<GetExperimentResult> {
+  const { db, siteId, ownerUserId, key } = input;
+
+  const [site, experiment] = await Promise.all([
+    db
+      .select()
+      .from(sites)
+      .where(eq(sites.id, siteId))
+      .limit(1)
+      .then((rows) => rows[0]),
+    db.query.experiments.findFirst({
+      where: and(eq(experiments.siteId, siteId), eq(experiments.key, key)),
+      with: { variants: true },
+    }),
+  ]);
+
+  if (!isOwnedBy(site, ownerUserId)) {
+    return SITE_NOT_FOUND;
+  }
+  if (!experiment) {
+    return { status: 404, body: { error: "Experiment not found" } };
+  }
+
+  return { status: 200, body: toExperimentResponse(experiment, experiment.variants) };
 }
 
 interface ListExperimentsInput {

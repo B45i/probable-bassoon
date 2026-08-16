@@ -1,7 +1,10 @@
 import { z } from "@hono/zod-openapi";
 
+// Optional — a conversion isn't tied to any experiment at write time, so "goal" here is
+// nothing more than a filter over which recorded conversions to count. Omit it and every
+// conversion for the site counts, regardless of what string it was recorded under.
 export const resultsQuerySchema = z.object({
-  goal: z.string().min(1),
+  goal: z.string().min(1).optional(),
 });
 export type ResultsQuery = z.infer<typeof resultsQuerySchema>;
 
@@ -31,7 +34,9 @@ const srmSchema = z.object({
 });
 
 export const resultsResponseSchema = z.object({
-  goal: z.string(),
+  /** Null when no goal filter was requested — the numbers below count every recorded
+   * conversion for the site, not just one goal's worth. */
+  goal: z.string().nullable(),
   variants: z.array(variantResultSchema),
   srm: srmSchema,
 });

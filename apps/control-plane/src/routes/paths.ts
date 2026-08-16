@@ -55,6 +55,7 @@ export const EXPERIMENTS_PATHS = {
 
 export const EXPERIMENT_BASE = `${SITES_BASE}/:siteId/experiments/:key`;
 export const EXPERIMENT_PATHS = {
+  root: "/",
   status: "/status",
   results: "/results",
 } as const;
@@ -62,6 +63,8 @@ export const EXPERIMENT_PATHS = {
 /** Params can't be baked into a static constant the way AUTH_ROUTES/SITES_ROUTES are —
  * tests (and anything else needing a concrete URL) call these instead. */
 export const experimentsRoute = (siteId: string): string => `${SITES_BASE}/${siteId}/experiments`;
+export const experimentRoute = (siteId: string, key: string): string =>
+  `${SITES_BASE}/${siteId}/experiments/${key}`;
 export const experimentStatusRoute = (siteId: string, key: string): string =>
   `${SITES_BASE}/${siteId}/experiments/${key}/status`;
 export const experimentResultsRoute = (siteId: string, key: string): string =>

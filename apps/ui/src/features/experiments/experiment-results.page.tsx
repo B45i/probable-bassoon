@@ -10,34 +10,17 @@ import {
   IconPercentage,
 } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
-import { parseAsString, useQueryState } from "nuqs"
-import { type SyntheticEvent, useState } from "react"
 import { Link, useParams } from "react-router"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { initials } from "@/lib/initials"
 import { sitePath } from "@/routes"
 
 import { EmbedSnippet } from "./embed-snippet"
 import { ExperimentStatusAction } from "./experiment-status-action"
 import { EXPERIMENT_STATUS_STYLE } from "./experiment-status-style"
-import { getRecentGoals, rememberGoal } from "./recent-goals"
-import { ResultsTable } from "./results-table"
-
-// The goal to report on is view state, not app state — it belongs in the URL (so a
-// results link with a goal already on it is shareable) rather than in a query/atom.
-const GOAL_PARAM = "goal"
-const RECENT_GOALS_LIST_ID = "recent-goals"
+import { ResultsCards } from "./results-cards"
 
 // Experiment keys are enforced lowercase-hyphenated slugs (see
 // create-experiment-dialog.tsx), not space-separated names — split on hyphens too, so
@@ -47,11 +30,6 @@ const KEY_SEGMENT_PATTERN = /[-\s]+/
 
 export function ExperimentResultsPage() {
   const { siteId, key } = useParams<{ siteId: string; key: string }>()
-  const [goal, setGoal] = useQueryState(
-    GOAL_PARAM,
-    parseAsString.withDefault("")
-  )
-  const [recentGoals] = useState(getRecentGoals)
 
   const sites = useQuery({ ...getV1SitesOptions(), enabled: Boolean(siteId) })
   const site = sites.data?.find((s) => s.id === siteId)
@@ -64,21 +42,17 @@ export function ExperimentResultsPage() {
   })
   const experiment = experimentQuery.data
 
+  // No `goal` param — it's an optional filter on the results endpoint, and this system
+  // has no per-experiment goal to pass yet. Omitting it counts every conversion recorded
+  // for the site, unfiltered.
   const results = useQuery({
     ...getV1SitesBySiteIdExperimentsByKeyResultsOptions({
       path: { siteId: siteId ?? "", key: key ?? "" },
-      query: { goal },
     }),
-    enabled: Boolean(siteId && key && goal),
+    enabled: Boolean(siteId && key),
   })
 
   if (!siteId || !key) return null
-
-  function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
-    event.preventDefault()
-    rememberGoal(goal)
-    void results.refetch()
-  }
 
   const status = experiment && EXPERIMENT_STATUS_STYLE[experiment.status]
 
@@ -146,53 +120,15 @@ export function ExperimentResultsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Results</CardTitle>
-          <CardAction>
-            <form className="flex items-end gap-2" onSubmit={handleSubmit}>
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="goal"
-                  className="text-xs font-normal text-muted-foreground"
-                >
-                  Conversion goal
-                </Label>
-                <Input
-                  id="goal"
-                  placeholder="signup"
-                  list={RECENT_GOALS_LIST_ID}
-                  value={goal}
-                  onChange={(event) => setGoal(event.target.value)}
-                  className="h-9"
-                />
-                <datalist id={RECENT_GOALS_LIST_ID}>
-                  {recentGoals.map((recentGoal) => (
-                    <option key={recentGoal} value={recentGoal} />
-                  ))}
-                </datalist>
-              </div>
-              <Button
-                type="submit"
-                variant="outline"
-                size="sm"
-                disabled={!goal}
-              >
-                Load results
-              </Button>
-            </form>
-          </CardAction>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {!goal && (
-            <p className="text-sm text-muted-foreground">
-              Enter a conversion goal above to see results.
-            </p>
-          )}
-          {results.isPending && goal && (
+          {results.isPending && (
             <p className="text-sm text-muted-foreground">Loading…</p>
           )}
           {results.isError && (
             <p className="text-sm text-destructive">Couldn't load results.</p>
           )}
-          {results.data && <ResultsTable results={results.data} />}
+          {results.data && <ResultsCards results={results.data} />}
         </CardContent>
       </Card>
     </div>
