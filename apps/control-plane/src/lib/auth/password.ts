@@ -12,7 +12,14 @@ import { fromHex, timingSafeEqual, toHex } from "../encoding";
  * treatment.
  */
 
-const ITERATIONS = 600_000; // OWASP 2023 minimum for PBKDF2-HMAC-SHA256
+// OWASP 2023 minimum for PBKDF2-HMAC-SHA256 is 600,000, but the real Workers runtime
+// (workerd) hard-caps crypto.subtle.deriveBits's PBKDF2 iteration count at 100,000 —
+// anything above throws NotSupportedError at request time. Miniflare (used by both
+// `wrangler dev` and the vitest-pool-workers test suite) doesn't enforce this cap, so
+// 600,000 passed every local check and only failed against a real deploy. 100,000 is
+// the highest value this platform actually supports, not a deliberately chosen weaker
+// number.
+const ITERATIONS = 100_000;
 const SALT_BYTES = 16;
 const HASH_BITS = 256;
 

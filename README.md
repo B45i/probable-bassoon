@@ -15,6 +15,44 @@ Built on Cloudflare's edge platform:
 - **Durable Objects** — exposure tracking, sharded per experiment
 - **D1** — experiment/variant configuration and conversion events
 
+## Apps and packages
+
+A Turborepo/pnpm-workspaces monorepo. `apps/*` are the deployables; `packages/*` are
+shared code, none of them independently deployed.
+
+**Apps**
+
+- **`apps/control-plane`** — the Worker on the non-critical path: auth, sites,
+  experiment config, tracking (exposure/conversion ingestion), and results. Owns D1 and
+  the `ExperimentExposures` Durable Object, and writes experiment config through to KV.
+- **`apps/assignment`** — the Worker on the critical path: `GET /v1/assign` and
+  `GET /snippet.js`. Reads config from KV only — no D1, no Durable Object access — so
+  nothing on this path can be slowed down or broken by anything control-plane does.
+- **`apps/ui`** — the admin dashboard (React/Vite): sign up, manage sites, create and
+  monitor experiments, view results. Talks to control-plane's API only; never touches
+  assignment directly.
+
+**Packages**
+
+- **`packages/shared`** — the assignment algorithm itself (murmur3 hash, bucketing,
+  stats for results) and the KV config schema — imported by both `control-plane` (which
+  writes config) and `assignment` (which reads it and buckets visitors), so the two
+  Workers can never disagree about what a valid config or a correct bucketing looks
+  like.
+- **`packages/db`** — Drizzle ORM schema and D1 client, used by `control-plane` only
+  (`assignment` never touches D1 — see D2/D6 in the design doc).
+- **`packages/snippet`** — the browser-facing JS snippet (`window.ABTester` —
+  `ready`/`trackExposure`/`trackConversion`), bundled as an IIFE and served by
+  `assignment` at `/snippet.js`. Built independently, then its output is inlined into
+  `assignment`'s own build.
+- **`packages/api-client`** — a typed client (hey-api + React Query hooks) generated
+  from `control-plane`'s OpenAPI spec, committed to git (not gitignored, unlike the
+  other generated artifacts here) since it's what `apps/ui` imports directly.
+- **`packages/perf`** — load-testing scripts for the two things in this system with a
+  real performance requirement: assignment latency and Durable Object write throughput.
+  Not part of the deployed system; run by hand against a live deployment.
+- **`packages/tsconfig`** — shared `tsconfig.json` bases, nothing runtime.
+
 ## Running locally
 
 **Setup (once):**
