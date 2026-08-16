@@ -15,6 +15,17 @@ Built on Cloudflare's edge platform:
 - **Durable Objects** — exposure tracking, sharded per experiment
 - **D1** — experiment/variant configuration and conversion events
 
+## Production
+
+| Piece         | URL                                                            |
+| -------------- | ---------------------------------------------------------------- |
+| UI (dashboard) | https://ab-tester-ui-43c.pages.dev                                |
+| control-plane  | https://ab-tester-control-plane.ab-testing-app.workers.dev        |
+| assignment     | https://ab-tester-assignment.ab-testing-app.workers.dev           |
+
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for how these got deployed and how to
+redeploy them.
+
 ## Apps and packages
 
 A Turborepo/pnpm-workspaces monorepo. `apps/*` are the deployables; `packages/*` are

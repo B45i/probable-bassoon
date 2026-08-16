@@ -16,8 +16,9 @@ assignment only reads it). Only control-plane uses D1 (experiment/variant data,
 conversions) and the `ExperimentExposures` Durable Object (exposure counts). The UI is a
 static build with no server component of its own; it just calls the two Workers.
 
-Nothing in this repo has been deployed yet — both `wrangler.jsonc` files still have
-placeholder resource IDs. The steps below fill those in.
+The steps below assume a clean Cloudflare account with no resources created yet —
+follow them as-is for a first deploy, or as the reference for what each `wrangler.jsonc`
+field and secret is for on a repo that's already live.
 
 ## Before you start
 
@@ -33,9 +34,37 @@ placeholder resource IDs. The steps below fill those in.
   pnpm --filter @ab-tester/control-plane exec wrangler login
   ```
 
-  If your account has more than one Cloudflare account on it (personal plus a team,
-  for example), wrangler will ask you to pick one on every command below unless you
-  set `CLOUDFLARE_ACCOUNT_ID` or add `"account_id"` to both `wrangler.jsonc` files.
+  If your login has more than one Cloudflare account on it (personal plus a team, for
+  example), wrangler will ask you to pick one on every command below unless you
+  disambiguate. See the warning right after this list before doing anything else in
+  that situation — the obvious way to disambiguate isn't the reliable one.
+- If this is a brand-new Cloudflare account, it has no `workers.dev` subdomain
+  registered yet. Deploying a Worker still works, but the Worker isn't reachable at
+  any URL until one is chosen. There's no CLI command for this — register one at
+  `https://dash.cloudflare.com/<account-id>/workers/subdomain` before Step 4, or the
+  first deploy will warn and print that same link.
+
+### If you manage more than one Cloudflare account
+
+Two real gotchas here, both found by hitting them, not by reading wrangler's docs:
+
+- **Set `"account_id"` directly in both `wrangler.jsonc` files, not just
+  `CLOUDFLARE_ACCOUNT_ID`.** For Workers, D1, and KV commands, `wrangler.jsonc`'s
+  `account_id` field wins over the `CLOUDFLARE_ACCOUNT_ID` env var whenever both are
+  set — so once it's in the config, every command run from that app directory
+  reliably targets the right account, but the env var alone can quietly get
+  overridden and hit the wrong one.
+- **Cloudflare Pages commands (`pages project list`, `pages project delete`) do not
+  reliably respect account targeting at all** — neither `CLOUDFLARE_ACCOUNT_ID` nor
+  running from a directory with no `wrangler.jsonc` was enough to keep them scoped to
+  the intended account in practice. Don't use the CLI to delete or list Pages
+  projects when more than one account is in play; use the Cloudflare dashboard
+  instead, where the active account is unambiguous.
+
+One more, unrelated to account targeting but easy to get burned by right after:
+**`wrangler delete` removes a Worker's secrets along with its code.** Redeploying
+afterward brings the code back but not the secrets — `JWT_SECRET` has to be set again
+with `wrangler secret put`, the same as a first-time setup.
 
 ## Step 1 — Create the shared KV namespace
 
@@ -45,7 +74,9 @@ pnpm --filter @ab-tester/control-plane exec wrangler kv namespace create EXPERIM
 
 This prints an `id`. Paste it into the `kv_namespaces` block in **both**
 `apps/control-plane/wrangler.jsonc` and `apps/assignment/wrangler.jsonc` — it has to be
-the same ID in both files, since that's how the two Workers see the same data.
+the same ID in both files, since that's how the two Workers see the same data. If
+you're targeting a non-default account, also add `"account_id"` to both files now (see
+the warning above) — every command from here on assumes it's there.
 
 ## Step 2 — Create the D1 database
 
@@ -71,13 +102,19 @@ deploy fails outright — that file doesn't exist until this runs.
 ## Step 4 — Deploy the two Workers
 
 ```
-pnpm --filter @ab-tester/assignment deploy
-pnpm --filter @ab-tester/control-plane deploy
+pnpm --filter @ab-tester/assignment run deploy
+pnpm --filter @ab-tester/control-plane run deploy
 ```
+
+The `run` is required — `pnpm deploy` (no `run`) is pnpm's own reserved subcommand for
+a different feature entirely, and it fails with `ERR_PNPM_INVALID_DEPLOY_TARGET`
+instead of running this package's `deploy` script.
 
 Each command prints the Worker's URL, something like
 `https://ab-tester-assignment.<your-subdomain>.workers.dev`. Note both down — the UI
-build in Step 6 needs them.
+build in Step 6 needs them. If the URL doesn't resolve for a minute or two right after
+a first deploy (freshly registered subdomain, or a freshly created Worker), that's
+normal DNS/TLS propagation — retry rather than assume something's wrong.
 
 control-plane will be live but not fully working yet: nothing has applied the database
 schema or set its JWT secret. `GET /health` on either Worker will already return `{"ok":
@@ -131,7 +168,11 @@ pnpm dlx wrangler@4 pages deploy apps/ui/dist --project-name ab-tester-ui
 ```
 
 The first command only needs to run once, ever. Each deploy prints the live URL —
-`https://ab-tester-ui.pages.dev` by default.
+`https://ab-tester-ui.pages.dev` by default, though `pages.dev` names are global across
+every Cloudflare account, so if `ab-tester-ui` is already taken (by another account,
+including one of your own), Cloudflare appends a short suffix instead, e.g.
+`ab-tester-ui-43c.pages.dev` — whatever the create command actually prints is the real
+one, don't assume the un-suffixed form.
 
 ## Verify
 
@@ -152,9 +193,9 @@ you can log in and see the site you just created.
 
 | Changed                          | Run                                                                 |
 | ---------------------------------- | ---------------------------------------------------------------------- |
-| Worker code only                 | `pnpm build`, then that Worker's `deploy` script                       |
-| A new D1 migration                | `wrangler d1 migrations apply DB --remote` (from control-plane), then deploy control-plane |
-| `packages/snippet`                | `pnpm build`, then deploy assignment                                   |
+| Worker code only                 | `pnpm build`, then `pnpm --filter <app> run deploy`                    |
+| A new D1 migration                | `wrangler d1 migrations apply DB --remote` (from control-plane), then redeploy control-plane |
+| `packages/snippet`                | `pnpm build`, then redeploy assignment                                 |
 | UI code                          | `pnpm --filter @ab-tester/ui build`, then `wrangler pages deploy apps/ui/dist --project-name ab-tester-ui` |
 
 `pnpm build` before deploying is always safe to run even when nothing relevant changed —
