@@ -3,7 +3,12 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build", "build-snippet"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**"],
+      // packages/snippet bakes this in at build time (see its tsup.config.ts) — has to
+      // be declared here or Turborepo's default strict env mode hides it from the task
+      // even when it's set in the invoking shell, and the snippet silently falls back
+      // to its old (wrong-origin) tracking behavior with no error to notice.
+      "env": ["TRACKING_ORIGIN"]
     },
     "dev": {
       "cache": false,

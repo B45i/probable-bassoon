@@ -93,6 +93,7 @@ The two are separate `wrangler dev` processes, so by default each simulates its 
 
 - `pnpm test` runs the full automated suite (`vitest` + `@cloudflare/vitest-pool-workers`, real Workers runtime semantics — no dev server needed).
 - Exercise the running system by hand with `curl`, or the browsable Swagger UI at `/docs` on each Worker (`http://localhost:8787/docs` for control plane, `http://localhost:8788/docs` for assignment). Typical flow: sign up → log in → create a site → create an experiment → set it `running` → `GET /v1/assign` on the Assignment Worker with that site's key.
+- `packages/snippet/demo.html` — a fake customer page with a real embed snippet hardcoded in, copied verbatim from an experiment's results page in the admin UI, the same as a real customer would paste it into their own site. Open it as-is, or swap in the `<script>` tag (and matching `EXPERIMENT_KEY`) from your own experiment. Renders like a real page — default content until assigned, then the variant's headline, a working "Sign up" button, and a bottom strip to simulate a new visitor.
 - `packages/perf` load-tests the two things with real performance requirements — Assignment latency and per-experiment Durable Object write throughput. See its own README for usage.
 
 ## Documentation

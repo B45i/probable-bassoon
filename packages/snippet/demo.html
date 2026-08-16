@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Acme — demo customer site</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 0; color: #1a1a1a; }
+      .hero { padding: 6rem 2rem 5rem; text-align: center; background: #fafafa; }
+      .hero h1 { font-size: 2.4rem; margin: 0 0 1rem; }
+      .hero p { color: #555; margin: 0 0 2rem; }
+      .cta { padding: 0.9rem 2.2rem; font-size: 1rem; background: #111; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+      .cta:hover { background: #333; }
+      .thanks { color: #0a7a2f; font-weight: 600; margin-top: 1.25rem; min-height: 1.2em; }
+      /* Not part of the site — a thin strip identifying this as a test harness. */
+      .test-harness { display: flex; justify-content: center; gap: 1rem; align-items: center; padding: 0.6rem; font-size: 0.75rem; color: #888; border-top: 1px dashed #ddd; }
+    </style>
+  </head>
+  <body>
+    <section class="hero">
+      <h1 id="headline">Welcome to Acme</h1>
+      <p>This is the page's own default copy — shown unless an experiment says otherwise.</p>
+      <button class="cta" id="signupBtn">Sign up free</button>
+      <p class="thanks" id="thanks"></p>
+    </section>
+
+    <div class="test-harness">
+      <span id="status"></span>
+      <button id="newVisitorBtn" type="button">Simulate a new visitor</button>
+    </div>
+
+    <!--
+      This is a real embed — copied verbatim from that experiment's results page in the
+      admin UI, exactly as a customer would paste it into their own site. To test a
+      different experiment, replace this tag with the one from its results page, and
+      update EXPERIMENT_KEY below to match `data-experiments`.
+    -->
+    <script async
+      src="https://ab-tester-assignment.ab-testing-app.workers.dev/snippet.js"
+      data-site-key="site_9f50f0eab3a6f4fe32ab31c04c2260711f538c61971a8291"
+      data-experiments="homepage-hero"
+    ></script>
+
+    <script>
+      const EXPERIMENT_KEY = "homepage-hero" // must match data-experiments above
+
+      const $ = (id) => document.getElementById(id)
+      const setStatus = (text) => { $("status").textContent = text }
+
+      $("newVisitorBtn").addEventListener("click", () => {
+        // Same visitor forever is the point of stickiness — this simulates a genuinely
+        // different one instead, by clearing the cookie the snippet reads/writes, so a
+        // reload buckets fresh and this page can show whether that changes anything.
+        document.cookie = "_abtester_vid=; Max-Age=0; Path=/" // must match packages/snippet/src/cookie.ts
+        location.reload()
+      })
+
+      // The embed tag above is `async` on purpose (never block page render) — which
+      // means `window.ABTester` isn't guaranteed to exist yet by the time this script
+      // runs; it's still being fetched. Wait for it rather than assuming it's there.
+      function whenLoaded(callback) {
+        if (window.ABTester) {
+          callback()
+        } else {
+          setTimeout(() => whenLoaded(callback), 10)
+        }
+      }
+
+      setStatus("Loading…")
+      whenLoaded(() => {
+        window.ABTester.ready((assignments) => {
+          const assignment = assignments[EXPERIMENT_KEY]
+          if (assignment) {
+            // Real usage: swap the content, then report the exposure right where it
+            // actually rendered — not automatically the moment assignment data arrives.
+            if (assignment.content && typeof assignment.content.headline === "string") {
+              $("headline").textContent = assignment.content.headline
+            }
+            window.ABTester.trackExposure(EXPERIMENT_KEY)
+            setStatus(`Variant "${assignment.variant}" — exposure recorded.`)
+          } else {
+            setStatus("Not part of this experiment — showing default content.")
+          }
+        })
+      })
+
+      $("signupBtn").addEventListener("click", () => {
+        if (!window.ABTester) return
+        window.ABTester.trackConversion("signup")
+        $("thanks").textContent = "🎉 Thanks for signing up! (conversion recorded)"
+      })
+    </script>
+  </body>
+</html>

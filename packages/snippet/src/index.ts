@@ -30,6 +30,20 @@ import { getVisitorId } from "./cookie";
 
 const ASSIGNMENT_TIMEOUT_MS = 150;
 
+/**
+ * `/v1/events/exposure` and `/v1/events/conversion` live on control-plane, a different
+ * deployed Worker than this script itself (assignment serves only `/v1/assign` and
+ * `/snippet.js` — see docs/DESIGN.md's Worker split). They can't reuse `config.origin`
+ * below the way the assign call does: that's derived from this script's own URL, which
+ * is only correct for assign, since that really is same-origin. Baked in at build time
+ * instead (see tsup.config.ts) — replaced with a literal string at build time, so this
+ * reads as `process.env.TRACKING_ORIGIN` in source but never actually touches Node's
+ * `process` at runtime in the browser. Falls back to this script's own origin if unset,
+ * rather than dropping tracking calls entirely — wrong-but-sent is easier to notice and
+ * debug than silently nothing.
+ */
+const TRACKING_ORIGIN = process.env.TRACKING_ORIGIN || undefined;
+
 interface Assignment {
   variant: string;
   content: Record<string, unknown>;
@@ -89,7 +103,7 @@ function trackExposure(experimentKey: string): void {
   if (!assignment) {
     return;
   }
-  sendBeacon(`${config.origin}/v1/events/exposure?site_key=${encodeURIComponent(config.siteKey)}`, {
+  sendBeacon(`${TRACKING_ORIGIN ?? config.origin}/v1/events/exposure?site_key=${encodeURIComponent(config.siteKey)}`, {
     visitor_id: config.visitorId,
     experiment: experimentKey,
     variant: assignment.variant,
@@ -104,7 +118,7 @@ function trackConversion(goal: string): void {
   if (!config) {
     return;
   }
-  sendBeacon(`${config.origin}/v1/events/conversion?site_key=${encodeURIComponent(config.siteKey)}`, {
+  sendBeacon(`${TRACKING_ORIGIN ?? config.origin}/v1/events/conversion?site_key=${encodeURIComponent(config.siteKey)}`, {
     visitor_id: config.visitorId,
     goal,
   });

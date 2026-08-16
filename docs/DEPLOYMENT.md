@@ -99,6 +99,11 @@ deploy` needs: the browser snippet (`packages/snippet`) gets built, then bundled
 `apps/assignment/src/generated/snippet-source.ts`. Skipping this step means assignment's
 deploy fails outright — that file doesn't exist until this runs.
 
+This first build doesn't know control-plane's URL yet (it isn't printed until Step 4),
+so the snippet's tracking calls (`trackExposure`/`trackConversion`) fall back to
+assignment's own origin — wrong, and silently so (see Step 4's note on `TRACKING_ORIGIN`
+for the fix, right after both URLs are known).
+
 ## Step 4 — Deploy the two Workers
 
 ```
@@ -112,13 +117,28 @@ instead of running this package's `deploy` script.
 
 Each command prints the Worker's URL, something like
 `https://ab-tester-assignment.<your-subdomain>.workers.dev`. Note both down — the UI
-build in Step 6 needs them. If the URL doesn't resolve for a minute or two right after
-a first deploy (freshly registered subdomain, or a freshly created Worker), that's
-normal DNS/TLS propagation — retry rather than assume something's wrong.
+build in Step 6 needs them, and so does the rebuild right below. If the URL doesn't
+resolve for a minute or two right after a first deploy (freshly registered subdomain, or
+a freshly created Worker), that's normal DNS/TLS propagation — retry rather than assume
+something's wrong.
 
 control-plane will be live but not fully working yet: nothing has applied the database
 schema or set its JWT secret. `GET /health` on either Worker will already return `{"ok":
 true}` at this point — that's a fine first check that the deploy itself worked.
+
+**Now that control-plane's URL is known, rebuild and redeploy assignment with it wired
+in** — `packages/snippet` bakes the tracking origin in at build time (`/v1/events/*`
+lives on control-plane, not assignment, so it can't be derived from the snippet's own
+script URL the way `/v1/assign` is):
+
+```
+TRACKING_ORIGIN=https://ab-tester-control-plane.<your-subdomain>.workers.dev pnpm build
+pnpm --filter @ab-tester/assignment run deploy
+```
+
+Skipping this leaves exposure/conversion tracking silently broken — the snippet still
+loads and assignment still works, `sendBeacon` still fires, it just 404s against the
+wrong Worker with no visible error anywhere.
 
 ## Step 5 — Finish setting up control-plane
 
@@ -195,8 +215,12 @@ you can log in and see the site you just created.
 | ---------------------------------- | ---------------------------------------------------------------------- |
 | Worker code only                 | `pnpm build`, then `pnpm --filter <app> run deploy`                    |
 | A new D1 migration                | `wrangler d1 migrations apply DB --remote` (from control-plane), then redeploy control-plane |
-| `packages/snippet`                | `pnpm build`, then redeploy assignment                                 |
+| `packages/snippet`                | `TRACKING_ORIGIN=<control-plane URL> pnpm build`, then redeploy assignment |
 | UI code                          | `pnpm --filter @ab-tester/ui build`, then `wrangler pages deploy apps/ui/dist --project-name ab-tester-ui` |
+
+Safest to just always include `TRACKING_ORIGIN` when rebuilding assignment for any
+reason, rather than trying to remember whether this particular change touched
+`packages/snippet`.
 
 `pnpm build` before deploying is always safe to run even when nothing relevant changed —
 Turborepo caches unchanged tasks and skips them.
@@ -223,10 +247,13 @@ pages deploy` against a previous local build.
 | `JWT_SECRET`             | control-plane, Worker secret | `wrangler secret put JWT_SECRET`                 |
 | `VITE_API_URL`           | UI build-time only    | `apps/ui/.env.production`                              |
 | `VITE_ASSIGNMENT_URL`    | UI build-time only    | `apps/ui/.env.production`                              |
+| `TRACKING_ORIGIN`        | `packages/snippet` build-time only | env var passed to `pnpm build` (see Step 4)     |
 
 None of the KV/D1 IDs are secret — they're identifiers, not credentials — so they're
 meant to be committed once filled in. `JWT_SECRET` and the two `.env.production`
-values are not committed; `.gitignore` already excludes them.
+values are not committed; `.gitignore` already excludes them. `TRACKING_ORIGIN` isn't
+secret either (it's a public URL, same as `VITE_ASSIGNMENT_URL`) — it's just not in a
+committed file because nothing in `packages/snippet` reads a `.env` file today.
 
 ## Known gaps before real production traffic
 
