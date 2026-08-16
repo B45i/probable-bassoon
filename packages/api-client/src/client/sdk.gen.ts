@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetHealthData, GetHealthResponses, GetV1AuthMeData, GetV1AuthMeErrors, GetV1AuthMeResponses, GetV1SitesBySiteIdExperimentsByKeyResultsData, GetV1SitesBySiteIdExperimentsByKeyResultsErrors, GetV1SitesBySiteIdExperimentsByKeyResultsResponses, GetV1SitesBySiteIdExperimentsData, GetV1SitesBySiteIdExperimentsErrors, GetV1SitesBySiteIdExperimentsResponses, GetV1SitesData, GetV1SitesErrors, GetV1SitesResponses, PostV1AuthLoginData, PostV1AuthLoginErrors, PostV1AuthLoginResponses, PostV1AuthSignupData, PostV1AuthSignupErrors, PostV1AuthSignupResponses, PostV1EventsConversionData, PostV1EventsConversionResponses, PostV1EventsExposureData, PostV1EventsExposureResponses, PostV1SitesBySiteIdExperimentsByKeyStatusData, PostV1SitesBySiteIdExperimentsByKeyStatusErrors, PostV1SitesBySiteIdExperimentsByKeyStatusResponses, PostV1SitesBySiteIdExperimentsData, PostV1SitesBySiteIdExperimentsErrors, PostV1SitesBySiteIdExperimentsResponses, PostV1SitesData, PostV1SitesErrors, PostV1SitesResponses } from './types.gen';
+import type { GetHealthData, GetHealthResponses, GetV1AuthMeData, GetV1AuthMeErrors, GetV1AuthMeResponses, GetV1SitesBySiteIdExperimentsByKeyData, GetV1SitesBySiteIdExperimentsByKeyErrors, GetV1SitesBySiteIdExperimentsByKeyResponses, GetV1SitesBySiteIdExperimentsByKeyResultsData, GetV1SitesBySiteIdExperimentsByKeyResultsErrors, GetV1SitesBySiteIdExperimentsByKeyResultsResponses, GetV1SitesBySiteIdExperimentsData, GetV1SitesBySiteIdExperimentsErrors, GetV1SitesBySiteIdExperimentsResponses, GetV1SitesBySiteIdGoalsData, GetV1SitesBySiteIdGoalsErrors, GetV1SitesBySiteIdGoalsResponses, GetV1SitesData, GetV1SitesErrors, GetV1SitesResponses, PostV1AuthLoginData, PostV1AuthLoginErrors, PostV1AuthLoginResponses, PostV1AuthSignupData, PostV1AuthSignupErrors, PostV1AuthSignupResponses, PostV1EventsConversionData, PostV1EventsConversionResponses, PostV1EventsExposureData, PostV1EventsExposureResponses, PostV1SitesBySiteIdExperimentsByKeyStatusData, PostV1SitesBySiteIdExperimentsByKeyStatusErrors, PostV1SitesBySiteIdExperimentsByKeyStatusResponses, PostV1SitesBySiteIdExperimentsData, PostV1SitesBySiteIdExperimentsErrors, PostV1SitesBySiteIdExperimentsResponses, PostV1SitesData, PostV1SitesErrors, PostV1SitesResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -87,6 +87,13 @@ export const postV1SitesBySiteIdExperiments = <ThrowOnError extends boolean = fa
     }
 });
 
+export const getV1SitesBySiteIdExperimentsByKey = <ThrowOnError extends boolean = false>(options: Options<GetV1SitesBySiteIdExperimentsByKeyData, ThrowOnError>): RequestResult<GetV1SitesBySiteIdExperimentsByKeyResponses, GetV1SitesBySiteIdExperimentsByKeyErrors, ThrowOnError> => (options.client ?? client).get<GetV1SitesBySiteIdExperimentsByKeyResponses, GetV1SitesBySiteIdExperimentsByKeyErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/sites/{siteId}/experiments/{key}',
+    ...options
+});
+
 export const postV1SitesBySiteIdExperimentsByKeyStatus = <ThrowOnError extends boolean = false>(options: Options<PostV1SitesBySiteIdExperimentsByKeyStatusData, ThrowOnError>): RequestResult<PostV1SitesBySiteIdExperimentsByKeyStatusResponses, PostV1SitesBySiteIdExperimentsByKeyStatusErrors, ThrowOnError> => (options.client ?? client).post<PostV1SitesBySiteIdExperimentsByKeyStatusResponses, PostV1SitesBySiteIdExperimentsByKeyStatusErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -102,6 +109,13 @@ export const getV1SitesBySiteIdExperimentsByKeyResults = <ThrowOnError extends b
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/v1/sites/{siteId}/experiments/{key}/results',
+    ...options
+});
+
+export const getV1SitesBySiteIdGoals = <ThrowOnError extends boolean = false>(options: Options<GetV1SitesBySiteIdGoalsData, ThrowOnError>): RequestResult<GetV1SitesBySiteIdGoalsResponses, GetV1SitesBySiteIdGoalsErrors, ThrowOnError> => (options.client ?? client).get<GetV1SitesBySiteIdGoalsResponses, GetV1SitesBySiteIdGoalsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/sites/{siteId}/goals',
     ...options
 });
 

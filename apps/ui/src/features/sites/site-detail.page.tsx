@@ -11,7 +11,6 @@ import { ROUTES } from "@/routes"
 import { CreateExperimentDialog } from "../experiments/create-experiment-dialog"
 import { ExperimentList } from "../experiments/experiment-list"
 import { CopyTextButton } from "./copy-text-button"
-import { SiteSnippet } from "./site-snippet"
 
 export function SiteDetailPage() {
   const { siteId } = useParams<{ siteId: string }>()
@@ -59,8 +58,9 @@ export function SiteDetailPage() {
       </Card>
 
       <div className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-muted-foreground">Experiments</h2>
-        <SiteSnippet siteId={site.id} apiKey={site.apiKey} />
+        <h2 className="text-sm font-medium text-muted-foreground">
+          Experiments
+        </h2>
         <ExperimentList siteId={site.id} />
       </div>
     </div>

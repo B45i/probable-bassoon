@@ -295,6 +295,53 @@ export type PostV1SitesBySiteIdExperimentsResponses = {
 
 export type PostV1SitesBySiteIdExperimentsResponse = PostV1SitesBySiteIdExperimentsResponses[keyof PostV1SitesBySiteIdExperimentsResponses];
 
+export type GetV1SitesBySiteIdExperimentsByKeyData = {
+    body?: never;
+    path: {
+        siteId: string;
+        key: string;
+    };
+    query?: never;
+    url: '/v1/sites/{siteId}/experiments/{key}';
+};
+
+export type GetV1SitesBySiteIdExperimentsByKeyErrors = {
+    /**
+     * Site or experiment not found
+     */
+    404: {
+        error: string;
+    };
+};
+
+export type GetV1SitesBySiteIdExperimentsByKeyError = GetV1SitesBySiteIdExperimentsByKeyErrors[keyof GetV1SitesBySiteIdExperimentsByKeyErrors];
+
+export type GetV1SitesBySiteIdExperimentsByKeyResponses = {
+    /**
+     * The experiment
+     */
+    200: {
+        id: string;
+        siteId: string;
+        key: string;
+        version: number;
+        status: 'draft' | 'running' | 'paused' | 'archived';
+        trafficBp: number;
+        createdAt: string;
+        variants: Array<{
+            id: string;
+            key: string;
+            weightBp: number;
+            isControl: boolean;
+            content: {
+                [key: string]: unknown;
+            };
+        }>;
+    };
+};
+
+export type GetV1SitesBySiteIdExperimentsByKeyResponse = GetV1SitesBySiteIdExperimentsByKeyResponses[keyof GetV1SitesBySiteIdExperimentsByKeyResponses];
+
 export type PostV1SitesBySiteIdExperimentsByKeyStatusData = {
     body?: {
         status: 'running' | 'paused';
@@ -396,6 +443,35 @@ export type GetV1SitesBySiteIdExperimentsByKeyResultsResponses = {
 };
 
 export type GetV1SitesBySiteIdExperimentsByKeyResultsResponse = GetV1SitesBySiteIdExperimentsByKeyResultsResponses[keyof GetV1SitesBySiteIdExperimentsByKeyResultsResponses];
+
+export type GetV1SitesBySiteIdGoalsData = {
+    body?: never;
+    path: {
+        siteId: string;
+    };
+    query?: never;
+    url: '/v1/sites/{siteId}/goals';
+};
+
+export type GetV1SitesBySiteIdGoalsErrors = {
+    /**
+     * Site not found
+     */
+    404: {
+        error: string;
+    };
+};
+
+export type GetV1SitesBySiteIdGoalsError = GetV1SitesBySiteIdGoalsErrors[keyof GetV1SitesBySiteIdGoalsErrors];
+
+export type GetV1SitesBySiteIdGoalsResponses = {
+    /**
+     * Goal keys recorded for this site
+     */
+    200: Array<string>;
+};
+
+export type GetV1SitesBySiteIdGoalsResponse = GetV1SitesBySiteIdGoalsResponses[keyof GetV1SitesBySiteIdGoalsResponses];
 
 export type PostV1EventsExposureData = {
     body?: {

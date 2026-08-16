@@ -50,4 +50,5 @@ The two are separate `wrangler dev` processes, so by default each simulates its 
 
 - [`docs/DESIGN.md`](docs/DESIGN.md) — the system design: architecture, key decisions, determinism, scale, reliability, correctness, and the LLM integration
 - [`docs/CODING-STANDARDS.md`](docs/CODING-STANDARDS.md) — route file layout, and how the API code avoids repeating itself
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — step-by-step production deployment to Cloudflare, and how to redeploy after that
 - [`docs/staff-principal-engineer-takehome-assignment-brief.md`](docs/staff-principal-engineer-takehome-assignment-brief.md) — the original brief

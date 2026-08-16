@@ -1,4 +1,7 @@
-import { getV1SitesBySiteIdExperimentsQueryKey, postV1SitesBySiteIdExperimentsMutation } from "@ab-tester/api-client"
+import {
+  getV1SitesBySiteIdExperimentsQueryKey,
+  postV1SitesBySiteIdExperimentsMutation,
+} from "@ab-tester/api-client"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { IconPlus, IconTrash } from "@tabler/icons-react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
@@ -16,7 +19,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { cn } from "@/lib/utils"
@@ -42,8 +50,21 @@ const variantSchema = z.object({
   splitPercent: z.number().int().min(0).max(100),
 })
 
+// Lowercase letters, numbers, hyphens, and underscores only — this isn't just a display
+// name, it's embedded directly into a live `<script data-experiments="...">` attribute
+// and sent as a query string on every `/v1/assign` call, so it needs to actually behave
+// like an identifier rather than accept whatever text someone types (spaces,
+// punctuation, unicode all "work" in the sense that nothing rejects them, but they make
+// for a confusing, easy-to-mistype value that ends up baked into a customer's own
+// site). Matches apps/control-plane's own copy of this pattern exactly.
+const EXPERIMENT_KEY_PATTERN = /^[a-z0-9]+([_-][a-z0-9]+)*$/
+
 const createExperimentSchema = z.object({
-  key: z.string().min(1).max(100),
+  key: z
+    .string()
+    .min(1, "Required")
+    .max(100)
+    .regex(EXPERIMENT_KEY_PATTERN, "Lowercase letters, numbers, hyphens, and underscores only — e.g. homepage-hero"),
   variants: z.array(variantSchema).min(MIN_VARIANTS).max(MAX_VARIANTS),
   controlIndex: z.number().int().min(0),
 })
@@ -79,10 +100,16 @@ export function CreateExperimentDialog({ siteId }: { siteId: string }) {
       controlIndex: 0,
     },
   })
-  const { fields, append, remove } = useFieldArray({ control, name: "variants" })
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "variants",
+  })
   const variants = useWatch({ control, name: "variants" })
 
-  const totalSplit = variants.reduce((sum, v) => sum + (Number.isFinite(v.splitPercent) ? v.splitPercent : 0), 0)
+  const totalSplit = variants.reduce(
+    (sum, v) => sum + (Number.isFinite(v.splitPercent) ? v.splitPercent : 0),
+    0
+  )
   const splitIsValid = totalSplit === 100
   const nonEmptyNames = variants.map((v) => v.key).filter(Boolean)
   const hasDuplicateNames = new Set(nonEmptyNames).size !== nonEmptyNames.length
@@ -120,7 +147,9 @@ export function CreateExperimentDialog({ siteId }: { siteId: string }) {
       {
         onSuccess: (experiment) => {
           void queryClient.invalidateQueries({
-            queryKey: getV1SitesBySiteIdExperimentsQueryKey({ path: { siteId } }),
+            queryKey: getV1SitesBySiteIdExperimentsQueryKey({
+              path: { siteId },
+            }),
           })
           setOpen(false)
           navigate(experimentResultsPath(experiment.siteId, experiment.key))
@@ -135,141 +164,210 @@ export function CreateExperimentDialog({ siteId }: { siteId: string }) {
         <IconPlus />
         New experiment
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="flex max-h-[85vh] flex-col sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>New experiment</DialogTitle>
         </DialogHeader>
-        <form className="flex flex-col gap-4" onSubmit={onSubmit}>
-          <Field data-invalid={!!errors.key}>
-            <FieldLabel htmlFor="experiment-key">Experiment name</FieldLabel>
-            <Input id="experiment-key" placeholder="homepage-hero" {...register("key")} />
-            <FieldError errors={[errors.key]} />
-          </Field>
+        {/* The header above and the submit button below stay put; only this middle
+            section scrolls — adding variants shouldn't push the submit button
+            off-screen or grow the dialog past the viewport. */}
+        <form
+          className="flex min-h-0 flex-1 flex-col gap-4"
+          onSubmit={onSubmit}
+        >
+          <div className="-m-1 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-1">
+            <Field data-invalid={!!errors.key}>
+              <FieldLabel htmlFor="experiment-key">Experiment name</FieldLabel>
+              <Input
+                id="experiment-key"
+                placeholder="homepage-hero"
+                {...register("key")}
+              />
+              <FieldError errors={[errors.key]} />
+            </Field>
 
-          <div className="flex flex-col gap-3">
-            <div>
-              <FieldLabel>Variants</FieldLabel>
-              <FieldDescription>
-                Each visitor sees exactly one of these. Mark one as the control — the version that's already live —
-                everything else gets compared against it.
-              </FieldDescription>
-            </div>
+            <div className="flex flex-col gap-3">
+              <div>
+                <FieldLabel>Variants</FieldLabel>
+                <FieldDescription>
+                  Each visitor sees exactly one of these. Mark one as the
+                  control — the version that's already live — everything else
+                  gets compared against it.
+                </FieldDescription>
+              </div>
 
-            <Controller
-              name="controlIndex"
-              control={control}
-              render={({ field: controlField }) => (
-                <RadioGroup
-                  value={String(controlField.value)}
-                  onValueChange={(value) => controlField.onChange(Number(value))}
-                  className="gap-3"
-                >
-                  {fields.map((variantField, index) => {
-                    const isControl = controlField.value === index
-                    return (
-                      <div
-                        key={variantField.id}
-                        className={cn(
-                          "flex flex-col gap-3 rounded-md border p-4",
-                          isControl && "border-primary/40 bg-primary/5"
-                        )}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">
-                            Variant {index + 1}
-                            {isControl && <span className="ml-2 text-xs text-primary">Control</span>}
-                          </span>
-                          {fields.length > MIN_VARIANTS && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label={`Remove variant ${index + 1}`}
-                              onClick={() => handleRemove(index)}
-                            >
-                              <IconTrash />
-                            </Button>
+              <Controller
+                name="controlIndex"
+                control={control}
+                render={({ field: controlField }) => (
+                  <RadioGroup
+                    value={String(controlField.value)}
+                    onValueChange={(value) =>
+                      controlField.onChange(Number(value))
+                    }
+                    className="gap-3"
+                  >
+                    {fields.map((variantField, index) => {
+                      const isControl = controlField.value === index
+                      return (
+                        <div
+                          key={variantField.id}
+                          className={cn(
+                            "flex flex-col gap-3 rounded-md border p-4",
+                            isControl && "border-primary/40 bg-primary/5"
                           )}
-                        </div>
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">
+                              Variant {index + 1}
+                              {isControl && (
+                                <span className="ml-2 text-xs text-primary">
+                                  Control
+                                </span>
+                              )}
+                            </span>
+                            {fields.length > MIN_VARIANTS && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={`Remove variant ${index + 1}`}
+                                onClick={() => handleRemove(index)}
+                              >
+                                <IconTrash />
+                              </Button>
+                            )}
+                          </div>
 
-                        <Field data-invalid={!!errors.variants?.[index]?.key}>
-                          <FieldLabel htmlFor={`variant-name-${variantField.id}`}>Name</FieldLabel>
-                          <Input
-                            id={`variant-name-${variantField.id}`}
-                            placeholder={index === 0 ? "e.g. original" : "e.g. bigger-button"}
-                            {...register(`variants.${index}.key` as const)}
-                          />
-                          <FieldError errors={[errors.variants?.[index]?.key]} />
-                        </Field>
-
-                        <Field data-invalid={!!errors.variants?.[index]?.headline}>
-                          <FieldLabel htmlFor={`variant-headline-${variantField.id}`}>
-                            Headline shown to visitors
-                          </FieldLabel>
-                          <Input
-                            id={`variant-headline-${variantField.id}`}
-                            placeholder="Welcome back!"
-                            {...register(`variants.${index}.headline` as const)}
-                          />
-                          <FieldError errors={[errors.variants?.[index]?.headline]} />
-                        </Field>
-
-                        <div className="flex items-end justify-between gap-4">
-                          <Field data-invalid={!!errors.variants?.[index]?.splitPercent}>
-                            <FieldLabel htmlFor={`variant-split-${variantField.id}`}>Traffic split</FieldLabel>
-                            <div className="flex items-center gap-1.5">
-                              <Input
-                                id={`variant-split-${variantField.id}`}
-                                type="number"
-                                min={0}
-                                max={100}
-                                className="w-20"
-                                {...register(`variants.${index}.splitPercent` as const, { valueAsNumber: true })}
-                              />
-                              <span className="text-sm text-muted-foreground">%</span>
-                            </div>
+                          <Field data-invalid={!!errors.variants?.[index]?.key}>
+                            <FieldLabel
+                              htmlFor={`variant-name-${variantField.id}`}
+                            >
+                              Name
+                            </FieldLabel>
+                            <Input
+                              id={`variant-name-${variantField.id}`}
+                              placeholder={
+                                index === 0
+                                  ? "e.g. original"
+                                  : "e.g. bigger-button"
+                              }
+                              {...register(`variants.${index}.key` as const)}
+                            />
+                            <FieldError
+                              errors={[errors.variants?.[index]?.key]}
+                            />
                           </Field>
 
-                          <label
-                            htmlFor={`control-${variantField.id}`}
-                            className="flex cursor-pointer items-center gap-2 pb-2.5 text-sm"
+                          <Field
+                            data-invalid={!!errors.variants?.[index]?.headline}
                           >
-                            <RadioGroupItem value={String(index)} id={`control-${variantField.id}`} />
-                            Use as control
-                          </label>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </RadioGroup>
-              )}
-            />
+                            <FieldLabel
+                              htmlFor={`variant-headline-${variantField.id}`}
+                            >
+                              Headline shown to visitors
+                            </FieldLabel>
+                            <Input
+                              id={`variant-headline-${variantField.id}`}
+                              placeholder="Welcome back!"
+                              {...register(
+                                `variants.${index}.headline` as const
+                              )}
+                            />
+                            <FieldError
+                              errors={[errors.variants?.[index]?.headline]}
+                            />
+                          </Field>
 
-            <div className="flex items-center justify-between">
-              <span className={cn("text-sm", splitIsValid ? "text-muted-foreground" : "text-destructive")}>
-                Total traffic: {totalSplit}%{!splitIsValid && " — must add up to 100%"}
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={fields.length >= MAX_VARIANTS}
-                onClick={() => append(emptyVariant())}
-              >
-                <IconPlus />
-                Add variant
-              </Button>
+                          <div className="flex items-end justify-between gap-4">
+                            <Field
+                              data-invalid={
+                                !!errors.variants?.[index]?.splitPercent
+                              }
+                            >
+                              <FieldLabel
+                                htmlFor={`variant-split-${variantField.id}`}
+                              >
+                                Traffic split
+                              </FieldLabel>
+                              <div className="flex items-center gap-1.5">
+                                <Input
+                                  id={`variant-split-${variantField.id}`}
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  className="w-20"
+                                  {...register(
+                                    `variants.${index}.splitPercent` as const,
+                                    { valueAsNumber: true }
+                                  )}
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                  %
+                                </span>
+                              </div>
+                            </Field>
+
+                            <label
+                              htmlFor={`control-${variantField.id}`}
+                              className="flex cursor-pointer items-center gap-2 pb-2.5 text-sm"
+                            >
+                              <RadioGroupItem
+                                value={String(index)}
+                                id={`control-${variantField.id}`}
+                              />
+                              Use as control
+                            </label>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </RadioGroup>
+                )}
+              />
+
+              <div className="flex items-center justify-between">
+                <span
+                  className={cn(
+                    "text-sm",
+                    splitIsValid ? "text-muted-foreground" : "text-destructive"
+                  )}
+                >
+                  Total traffic: {totalSplit}%
+                  {!splitIsValid && " — must add up to 100%"}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={fields.length >= MAX_VARIANTS}
+                  onClick={() => append(emptyVariant())}
+                >
+                  <IconPlus />
+                  Add variant
+                </Button>
+              </div>
+              {hasDuplicateNames && (
+                <p className="text-sm text-destructive">
+                  Variant names must be unique.
+                </p>
+              )}
             </div>
-            {hasDuplicateNames && <p className="text-sm text-destructive">Variant names must be unique.</p>}
           </div>
 
           {createExperiment.isError && (
             <p className="text-sm text-destructive">
-              {createExperiment.error.response?.data.error ?? "Something went wrong."}
+              {createExperiment.error.response?.data.error ??
+                "Something went wrong."}
             </p>
           )}
           <DialogFooter>
-            <Button type="submit" disabled={createExperiment.isPending || !splitIsValid || hasDuplicateNames}>
+            <Button
+              type="submit"
+              disabled={
+                createExperiment.isPending || !splitIsValid || hasDuplicateNames
+              }
+            >
               {createExperiment.isPending ? "Creating…" : "Create experiment"}
             </Button>
           </DialogFooter>
