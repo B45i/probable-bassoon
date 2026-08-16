@@ -57,7 +57,7 @@ export function ExperimentResultsPage() {
   const status = experiment && EXPERIMENT_STATUS_STYLE[experiment.status]
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <Link
         to={sitePath(siteId)}
         className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -125,7 +125,7 @@ export function ExperimentResultsPage() {
           {results.isPending && (
             <p className="text-sm text-muted-foreground">Loading…</p>
           )}
-          {results.isError && (
+          {results.isError && !results.data && (
             <p className="text-sm text-destructive">Couldn't load results.</p>
           )}
           {results.data && <ResultsCards results={results.data} />}
